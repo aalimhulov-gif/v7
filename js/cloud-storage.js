@@ -2,14 +2,13 @@
 
 // Firebase Configuration
 const firebaseConfig = {
-  apiKey: "AIzaBytzGbv62vVZ6n6cv9EB_SdBf2UPBo",
+  apiKey: "AIzaSyAiB6veVSOVDVz5Nx8xZ9Eb_6dEp7JUTBo",
   authDomain: "budgetami.firebaseapp.com", 
   databaseURL: "https://budgetami-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "budgetami",
   storageBucket: "budgetami.firebasestorage.app",
-  messagingSenderId: "447796781652",
-  appId: "1:447796781652:web:0bb500fe4ca84b3b1fbde4",
-  measurementId: "G-XXXXXXXXXX"
+  messagingSenderId: "446736675165",
+  appId: "1:446736675165:web:00858e64e042e95bf1b8b4"
 };
 
 // Firebase Database References
