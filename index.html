@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#1a1a1a" />
+    <title>Совместный Бюджет - Артур & Валерия</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/variables.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/operations.css" />
+    <link rel="stylesheet" href="css/modals.css" />
+  </head>
+  <body>
+    <!-- Header -->
+    <header class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo"><i class="fas fa-wallet"></i> Бюджет</div>
+          <button class="burger-menu" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Меню</h2>
+        <button class="close-sidebar" onclick="toggleSidebar()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item" onclick="openModal('incomeModal')">
+          <i
+            class="fas fa-plus-circle"
+            style="color: var(--accent-success)"
+          ></i>
+          Доход
+        </button>
+        <button class="nav-item" onclick="openModal('expenseModal')">
+          <i
+            class="fas fa-minus-circle"
+            style="color: var(--accent-danger)"
+          ></i>
+          Расход
+        </button>
+        <button class="nav-item" onclick="openModal('goalModal')">
+          <i class="fas fa-bullseye"></i>
+          Цели
+        </button>
+        <button class="nav-item" onclick="openModal('categoryModal')">
+          <i class="fas fa-tags"></i>
+          Категории
+        </button>
+        <button class="nav-item" onclick="openModal('limitModal')">
+          <i class="fas fa-chart-line"></i>
+          Лимиты
+        </button>
+        <button class="nav-item" onclick="showAnalytics()">
+          <i class="fas fa-chart-bar"></i>
+          Аналитика
+        </button>
+        <button class="nav-item" onclick="openModal('settingsModal')">
+          <i class="fas fa-cog"></i>
+          Настройки
+        </button>
+        <button class="nav-item" onclick="exportData()">
+          <i class="fas fa-download"></i>
+          Экспорт данных
+        </button>
+        <button class="nav-item" onclick="importData()">
+          <i class="fas fa-upload"></i>
+          Импорт данных
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="container">
+        <!-- Balance Section -->
+        <section class="balance-section">
+          <div class="balance-card unified">
+            <div class="balance-header">
+              <h3 class="balance-title">Семейный бюджет</h3>
+              <span class="balance-period">За текущий месяц</span>
+            </div>
+
+            <div class="balance-persons">
+              <div class="person-balance artur">
+                <div class="person-name">Артур</div>
+                <div class="person-amount" id="arturBalance">0 zł</div>
+              </div>
+              <div class="person-balance valeria">
+                <div class="person-name">Валерия</div>
+                <div class="person-amount" id="valeriaBalance">0 zł</div>
+              </div>
+            </div>
+
+            <div class="total-balance">
+              <div class="total-balance-label">Общий баланс</div>
+              <div class="total-balance-amount" id="totalBalance">0 zł</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quick Actions -->
+        <section class="quick-actions">
+          <button class="action-btn income" onclick="openModal('incomeModal')">
+            <i class="fas fa-plus-circle"></i>
+            <span>Добавить доход</span>
+          </button>
+          <button
+            class="action-btn expense"
+            onclick="openModal('expenseModal')"
+          >
+            <i class="fas fa-minus-circle"></i>
+            <span>Добавить расход</span>
+          </button>
+        </section>
+
+        <!-- Recent Operations -->
+        <section class="section">
+          <div class="section-header">
+            <h2 class="section-title">Последние операции</h2>
+            <a href="#" class="see-all" onclick="showAnalytics()"
+              >Посмотреть все</a
+            >
+          </div>
+          <div class="operations-list" id="operationsList">
+            <div class="empty-state">
+              <i class="fas fa-receipt"></i>
+              <h3>Операций пока нет</h3>
+              <p>Добавьте первую операцию, чтобы начать отслеживать бюджет</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Categories & Goals -->
+        <div class="grid-2 hide-mobile">
+          <div class="card">
+            <h3 class="card-title">Лимиты категорий</h3>
+            <div id="categoryLimits">
+              <div class="empty-state">
+                <i class="fas fa-chart-pie"></i>
+                <h3>Лимиты не настроены</h3>
+                <p>Установите лимиты для контроля расходов</p>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Цели</h3>
+            <div id="goalsList">
+              <div class="empty-state">
+                <i class="fas fa-bullseye"></i>
+                <h3>Целей пока нет</h3>
+                <p>Создайте цель для накопления</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Income Modal -->
+    <div class="modal-overlay" id="incomeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Добавить доход</h2>
+          <button class="modal-close" onclick="closeModal('incomeModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="incomeForm" onsubmit="addIncome(event)">
+            <div class="form-group">
+              <label class="form-label">Сумма</label>
+              <input
+                type="number"
+                class="form-input"
+                name="amount"
+                required
+                step="0.01"
+                min="0"
+                placeholder="0"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Кто получил</label>
+                <select class="form-select" name="person" required>
+                  <option value="">Выберите</option>
+                  <option value="artur">Артур</option>
+                  <option value="valeria">Валерия</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Категория</label>
+                <select class="form-select" name="category" required>
+                  <option value="">Выберите</option>
+                  <option value="salary">Зарплата</option>
+                  <option value="bonus">Премия</option>
+                  <option value="freelance">Фриланс</option>
+                  <option value="other">Другое</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Описание</label>
+              <input
+                type="text"
+                class="form-input"
+                name="description"
+                placeholder="Описание (необязательно)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Дата</label>
+              <input type="date" class="form-input" name="date" required />
+            </div>
+            <button type="submit" class="btn btn-success btn-full">
+              <i class="fas fa-plus"></i>
+              Добавить доход
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Expense Modal -->
+    <div class="modal-overlay" id="expenseModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Добавить расход</h2>
+          <button class="modal-close" onclick="closeModal('expenseModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="expenseForm" onsubmit="addExpense(event)">
+            <div class="form-group">
+              <label class="form-label">Сумма</label>
+              <input
+                type="number"
+                class="form-input"
+                name="amount"
+                required
+                step="0.01"
+                min="0"
+                placeholder="0"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Кто потратил</label>
+                <select class="form-select" name="person" required>
+                  <option value="">Выберите</option>
+                  <option value="artur">Артур</option>
+                  <option value="valeria">Валерия</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Категория</label>
+                <select class="form-select" name="category" required>
+                  <option value="">Выберите</option>
+                  <option value="food">Еда</option>
+                  <option value="transport">Транспорт</option>
+                  <option value="entertainment">Развлечения</option>
+                  <option value="utilities">Коммуналка</option>
+                  <option value="shopping">Покупки</option>
+                  <option value="health">Здоровье</option>
+                  <option value="other">Другое</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Описание</label>
+              <input
+                type="text"
+                class="form-input"
+                name="description"
+                placeholder="Описание (необязательно)"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Дата</label>
+              <input type="date" class="form-input" name="date" required />
+            </div>
+            <button type="submit" class="btn btn-danger btn-full">
+              <i class="fas fa-minus"></i>
+              Добавить расход
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Modal -->
+    <div class="modal-overlay" id="categoryModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Управление категориями</h2>
+          <button class="modal-close" onclick="closeModal('categoryModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="categoryForm" onsubmit="addCategory(event)">
+            <div class="form-group">
+              <label class="form-label">Название категории</label>
+              <input
+                type="text"
+                class="form-input"
+                name="name"
+                required
+                placeholder="Название категории"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Тип</label>
+              <select class="form-select" name="type" required>
+                <option value="">Выберите тип</option>
+                <option value="income">Доход</option>
+                <option value="expense">Расход</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+              <i class="fas fa-plus"></i>
+              Добавить категорию
+            </button>
+          </form>
+
+          <div style="margin-top: 24px">
+            <h3 style="margin-bottom: 16px; font-size: 18px">
+              Существующие категории
+            </h3>
+            <div id="categoriesList">
+              <!-- Categories will be rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div class="modal-overlay" id="goalModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Управление целями</h2>
+          <button class="modal-close" onclick="closeModal('goalModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="goalForm" onsubmit="addGoal(event)">
+            <div class="form-group">
+              <label class="form-label">Название цели</label>
+              <input
+                type="text"
+                class="form-input"
+                name="name"
+                required
+                placeholder="Например: Отпуск"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Целевая сумма</label>
+                <input
+                  type="number"
+                  class="form-input"
+                  name="target"
+                  required
+                  step="0.01"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Дата достижения</label>
+                <input
+                  type="date"
+                  class="form-input"
+                  name="deadline"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Описание</label>
+              <textarea
+                class="form-textarea"
+                name="description"
+                placeholder="Описание цели (необязательно)"
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+              <i class="fas fa-target"></i>
+              Создать цель
+            </button>
+          </form>
+
+          <div style="margin-top: 24px">
+            <h3 style="margin-bottom: 16px; font-size: 18px">Текущие цели</h3>
+            <div id="goalsManagementList">
+              <!-- Goals will be rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Limit Modal -->
+    <div class="modal-overlay" id="limitModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Лимиты по категориям</h2>
+          <button class="modal-close" onclick="closeModal('limitModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form id="limitForm" onsubmit="addLimit(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Категория</label>
+                <select class="form-select" name="category" required>
+                  <option value="">Выберите категорию</option>
+                  <option value="food">Еда</option>
+                  <option value="transport">Транспорт</option>
+                  <option value="entertainment">Развлечения</option>
+                  <option value="utilities">Коммуналка</option>
+                  <option value="shopping">Покупки</option>
+                  <option value="health">Здоровье</option>
+                  <option value="other">Другое</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Лимит в месяц</label>
+                <input
+                  type="number"
+                  class="form-input"
+                  name="amount"
+                  required
+                  step="0.01"
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+              <i class="fas fa-chart-line"></i>
+              Установить лимит
+            </button>
+          </form>
+
+          <div style="margin-top: 24px">
+            <h3 style="margin-bottom: 16px; font-size: 18px">
+              Установленные лимиты
+            </h3>
+            <div id="limitsManagementList">
+              <!-- Limits will be rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Настройки</h2>
+          <button class="modal-close" onclick="closeModal('settingsModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Тема оформления</label>
+            <select
+              class="form-select"
+              id="themeSelect"
+              onchange="changeTheme(this.value)"
+            >
+              <option value="dark">Темная</option>
+              <option value="light">Светлая</option>
+              <option value="auto">Автоматическая</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Размер шрифта</label>
+            <select
+              class="form-select"
+              id="fontSizeSelect"
+              onchange="changeFontSize(this.value)"
+            >
+              <option value="small">Мелкий</option>
+              <option value="medium">Средний</option>
+              <option value="large">Крупный</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Валюта</label>
+            <select
+              class="form-select"
+              id="currencySelect"
+              onchange="changeCurrency(this.value)"
+            >
+              <option value="zł">Польский злотый (zł)</option>
+              <option value="₽">Российский рубль (₽)</option>
+              <option value="$">Доллар США ($)</option>
+              <option value="€">Евро (€)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Уведомления</label>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-top: 8px;
+              "
+            >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                  cursor: pointer;
+                "
+              >
+                <input
+                  type="checkbox"
+                  id="notificationsCheck"
+                  onchange="toggleNotifications(this.checked)"
+                />
+                <span>Включить уведомления</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Опасная зона</label>
+            <button
+              type="button"
+              class="btn btn-danger btn-full"
+              onclick="clearAllData()"
+            >
+              <i class="fas fa-trash"></i>
+              Очистить все данные
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div class="modal-overlay" id="analyticsModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title">Аналитика</h2>
+          <button class="modal-close" onclick="closeModal('analyticsModal')">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-row" style="margin-bottom: 20px">
+            <div class="form-group">
+              <label class="form-label">Период</label>
+              <select
+                class="form-select"
+                id="periodSelect"
+                onchange="updateAnalytics()"
+              >
+                <option value="month">Текущий месяц</option>
+                <option value="year">Текущий год</option>
+                <option value="all">Все время</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Фильтр</label>
+              <select
+                class="form-select"
+                id="filterSelect"
+                onchange="updateAnalytics()"
+              >
+                <option value="all">Все операции</option>
+                <option value="artur">Только Артур</option>
+                <option value="valeria">Только Валерия</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="analyticsContent">
+            <!-- Analytics content will be rendered here -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/cloud-storage.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/rendering.js"></script>
+    <script src="js/data-management.js"></script>
+    <script src="js/analytics.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,96 @@
+/* ===== OPERATIONS ===== */
+.operations-list {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.operation-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.operation-item:last-child {
+  border-bottom: none;
+}
+
+.operation-item:hover {
+  background: var(--bg-hover);
+}
+
+.operation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.operation-info h4 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.operation-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.operation-amount {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.operation-amount.income {
+  color: var(--accent-success);
+}
+
+.operation-amount.expense {
+  color: var(--accent-danger);
+}
+
+/* ===== PROGRESS BARS ===== */
+.progress-item {
+  margin-bottom: 16px;
+}
+
+.progress-item:last-child {
+  margin-bottom: 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.progress-value {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.progress-bar {
+  height: 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--accent-primary),
+    var(--accent-success)
+  );
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}

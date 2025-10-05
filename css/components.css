@@ -1,0 +1,283 @@
+/* ===== BALANCE CARDS ===== */
+.balance-section {
+  margin-bottom: 32px;
+}
+
+.balance-card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: 32px;
+  border: 1px solid var(--border-color);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.balance-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+}
+
+.balance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
+}
+
+.balance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.balance-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.balance-period {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  background: var(--bg-tertiary);
+  padding: 4px 12px;
+  border-radius: 20px;
+}
+
+.balance-persons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.person-balance {
+  text-align: center;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  position: relative;
+}
+
+.person-balance.artur::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-primary);
+  border-radius: 12px 12px 0 0;
+}
+
+.person-balance.valeria::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent-success);
+  border-radius: 12px 12px 0 0;
+}
+
+.person-name {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.person-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.total-balance {
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  margin-top: 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.total-balance::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.total-balance > * {
+  position: relative;
+  z-index: 1;
+}
+
+.total-balance-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.total-balance-amount {
+  font-size: 32px;
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== QUICK ACTIONS ===== */
+.quick-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.action-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: var(--transition);
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.action-btn:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+}
+
+.action-btn.income {
+  border-left: 4px solid var(--accent-success);
+}
+
+.action-btn.expense {
+  border-left: 4px solid var(--accent-danger);
+}
+
+.action-btn i {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.action-btn.income i {
+  color: var(--accent-success);
+}
+
+.action-btn.expense i {
+  color: var(--accent-danger);
+}
+
+/* ===== CARDS ===== */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* ===== SECTIONS ===== */
+.section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.see-all {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+}
+
+.empty-state i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.empty-state p {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .balance-card {
+    padding: 24px 16px;
+  }
+
+  .balance-persons {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .person-amount {
+    font-size: 20px;
+  }
+
+  .total-balance-amount {
+    font-size: 28px;
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
