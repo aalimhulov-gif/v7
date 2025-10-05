@@ -117,13 +117,8 @@ class BudgetApp {
       const cloudInitialized = await EnhancedStorage.init();
       
       if (cloudInitialized) {
-        console.log('✅ Облачное хранилище инициализировано');
-        
         // Register this device
         await EnhancedStorage.registerDevice(this.deviceInfo);
-        console.log(`✅ Устройство зарегистрировано: ${this.deviceInfo.displayName}`);
-      } else {
-        console.log('⚠️ Работаем в офлайн режиме');
       }
       
       // Load data from cloud or local storage
