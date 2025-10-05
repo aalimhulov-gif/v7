@@ -35,6 +35,9 @@ class BudgetApp {
       // Load data from cloud or local storage
       await this.loadData();
       
+      // Setup real-time synchronization
+      this.setupRealtimeSync();
+      
       this.updateBalances();
       this.renderOperations();
       this.renderLimits();
@@ -57,6 +60,31 @@ class BudgetApp {
       this.updateCategorySelects();
       this.applySettings();
     }
+  }
+
+  // ===== REAL-TIME SYNCHRONIZATION =====
+  setupRealtimeSync() {
+    if (EnhancedStorage.isCloudAvailable()) {
+      console.log('🔄 Настройка real-time синхронизации...');
+      const listener = EnhancedStorage.setupRealtimeSync((newData) => {
+        console.log('📡 Получены обновления данных:', newData);
+        if (newData) {
+          this.data = { ...this.data, ...newData };
+          this.updateUI();
+        }
+      });
+      
+      // Store listener reference for cleanup
+      this.realtimeListener = listener;
+    }
+  }
+
+  updateUI() {
+    console.log('🔄 Обновление UI после синхронизации...');
+    this.updateBalances();
+    this.renderOperations();
+    this.renderLimits();
+    this.renderGoals();
   }
 
   // ===== DATA MANAGEMENT =====

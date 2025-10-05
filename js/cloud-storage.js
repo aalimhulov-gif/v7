@@ -209,6 +209,49 @@ const CloudStorage = {
   // Check connection status
   isConnected() {
     return this.isAvailable && this.userId !== null;
+  },
+
+  // Setup real-time listener for data changes
+  setupRealtimeListener(callback) {
+    if (!this.isAvailable || !this.userId || !database) {
+      console.log('⚠️ Real-time listener not available');
+      return null;
+    }
+
+    console.log('🔄 Настройка real-time слушателя для синхронизации...');
+    
+    const dataRef = database.ref(`budgets/${this.userId}/data`);
+    
+    const listener = dataRef.on('value', (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        console.log('🔄 Получены обновления из Firebase:', data);
+        
+        // Save to localStorage as backup
+        const fullData = {
+          ...data,
+          lastModified: Date.now()
+        };
+        StorageUtils.set(APP_CONFIG.storageKey, fullData);
+        
+        // Call the callback to update UI
+        if (callback && typeof callback === 'function') {
+          callback(fullData);
+        }
+      }
+    }, (error) => {
+      console.error('❌ Real-time listener error:', error);
+    });
+
+    return listener;
+  },
+
+  // Remove real-time listener
+  removeRealtimeListener(listener) {
+    if (listener && this.isAvailable && this.userId && database) {
+      database.ref(`budgets/${this.userId}/data`).off('value', listener);
+      console.log('🔄 Real-time слушатель отключен');
+    }
   }
 };
 
@@ -268,5 +311,16 @@ const EnhancedStorage = {
 
   isCloudAvailable() {
     return CloudStorage.isConnected();
+  },
+
+  // Setup real-time synchronization
+  setupRealtimeSync(callback) {
+    console.log('🔄 EnhancedStorage.setupRealtimeSync() - Настройка синхронизации...');
+    return CloudStorage.setupRealtimeListener(callback);
+  },
+
+  // Remove real-time synchronization
+  removeRealtimeSync(listener) {
+    CloudStorage.removeRealtimeListener(listener);
   }
 };
