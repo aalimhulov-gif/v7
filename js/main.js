@@ -15,6 +15,41 @@ function debugLog(message, type = 'info') {
 // Global app instance
 let app;
 
+// Firebase diagnostic function
+async function testFirebaseConnection() {
+  console.log('🧪 === FIREBASE DIAGNOSTIC TEST ===');
+  
+  try {
+    if (typeof firebase === 'undefined') {
+      console.error('❌ Firebase SDK не загружен');
+      return;
+    }
+    
+    console.log('✅ Firebase SDK загружен');
+    
+    // Test database connection
+    const testData = {
+      test: true,
+      timestamp: Date.now(),
+      message: 'Direct test from console'
+    };
+    
+    await firebase.database().ref('families/artur-valeria-budget/consoleTest').set(testData);
+    console.log('✅ Прямая запись в Firebase успешна!');
+    console.log('🔍 Проверьте Firebase Console -> Realtime Database -> families/artur-valeria-budget/consoleTest');
+    
+    // Clean up
+    await firebase.database().ref('families/artur-valeria-budget/consoleTest').remove();
+    console.log('🧹 Тестовые данные удалены');
+    
+  } catch (error) {
+    console.error('❌ Ошибка теста Firebase:', error);
+  }
+}
+
+// Make test function globally available
+window.testFirebaseConnection = testFirebaseConnection;
+
 // ===== UI INTERACTION FUNCTIONS =====
 function toggleSidebar() {
   const sidebar = document.getElementById("sidebar");

@@ -3,12 +3,12 @@
 // Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAiB6veVSOVDVz5Nx8xZ9Eb_6dEp7JUTBo",
-  authDomain: "budgetami.firebaseapp.com", 
+  authDomain: "budgetami.firebaseapp.com",
   databaseURL: "https://budgetami-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "budgetami",
   storageBucket: "budgetami.firebasestorage.app",
-  messagingSenderId: "446736675165",
-  appId: "1:446736675165:web:00858e64e042e95bf1b8b4"
+  messagingSenderId: "211374589260",
+  appId: "1:211374589260:web:1570eb8b1ddd56a8f64eca"
 };
 
 // Firebase Database References
@@ -64,6 +64,21 @@ const CloudStorage = {
       this.isAvailable = true;
       console.log(`✅ Cloud storage initialized successfully with user: ${this.userId}`);
       console.log(`👨‍👩‍👧‍👦 Using family ID: ${this.familyId}`);
+      
+      // Test write to Firebase immediately
+      console.log('🧪 Тестируем запись в Firebase...');
+      try {
+        await database.ref(`families/${this.familyId}/test`).set({
+          timestamp: Date.now(),
+          message: 'Test connection successful'
+        });
+        console.log('✅ Тест записи в Firebase успешен!');
+        // Remove test data
+        await database.ref(`families/${this.familyId}/test`).remove();
+      } catch (testError) {
+        console.error('❌ Тест записи в Firebase провален:', testError);
+      }
+      
       return true;
     } catch (error) {
       console.error('❌ Cloud storage initialization failed:', error);
