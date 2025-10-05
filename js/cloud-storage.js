@@ -210,7 +210,17 @@ const CloudStorage = {
       if (snapshot.exists()) {
         const data = snapshot.val();
         console.log('📡 Получены обновления из Firebase:', data);
-        console.log(`📊 Операций в данных: ${data.operations ? data.operations.length : 0}`);
+        
+        // Check operations count properly
+        let operationsCount = 0;
+        if (data.operations) {
+          if (Array.isArray(data.operations)) {
+            operationsCount = data.operations.length;
+          } else if (typeof data.operations === 'object') {
+            operationsCount = Object.keys(data.operations).length;
+          }
+        }
+        console.log(`📊 Операций в данных: ${operationsCount}`);
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
@@ -308,5 +318,14 @@ const EnhancedStorage = {
   // Remove real-time synchronization
   removeRealtimeSync(listener) {
     CloudStorage.removeRealtimeListener(listener);
+  },
+
+  // Get current status
+  getStatus() {
+    return {
+      cloudConnected: CloudStorage.isConnected(),
+      lastSync: new Date().toLocaleTimeString(),
+      familyId: CloudStorage.familyId
+    };
   }
 };

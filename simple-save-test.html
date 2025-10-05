@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Простой тест сохранения</title>
+    <style>
+      body {
+        font-family: Arial;
+        padding: 20px;
+      }
+      .log {
+        padding: 5px;
+        margin: 5px 0;
+        border-radius: 3px;
+      }
+      .success {
+        background: #d4edda;
+      }
+      .error {
+        background: #f8d7da;
+      }
+      .info {
+        background: #d1ecf1;
+      }
+      button {
+        padding: 10px;
+        margin: 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Простой тест сохранения операций</h1>
+    <button onclick="directFirebaseTest()">Прямой тест Firebase</button>
+    <button onclick="testEnhancedStorage()">Тест EnhancedStorage</button>
+    <button onclick="checkFirebaseData()">Проверить данные в Firebase</button>
+    <div id="log"></div>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/cloud-storage.js"></script>
+
+    <script>
+      function log(message, type = "info") {
+        const div = document.createElement("div");
+        div.className = `log ${type}`;
+        div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        document.getElementById("log").appendChild(div);
+        console.log(message);
+      }
+
+      async function directFirebaseTest() {
+        log("🔥 Прямой тест Firebase...", "info");
+
+        try {
+          // Wait for auth
+          await firebase.auth().signInAnonymously();
+          log("✅ Аутентификация успешна", "success");
+
+          const database = firebase.database();
+          const testOperation = {
+            id: Date.now(),
+            type: "income",
+            amount: 500,
+            person: "artur",
+            category: "test",
+            description: "Прямой тест Firebase",
+            date: new Date().toISOString().split("T")[0],
+            timestamp: new Date().toISOString(),
+          };
+
+          // Test saving to family path
+          const familyPath =
+            "families/artur-valeria-budget/budgetData/operations";
+          log(`📝 Сохраняем по пути: ${familyPath}`, "info");
+
+          await database
+            .ref(`${familyPath}/${testOperation.id}`)
+            .set(testOperation);
+          log("✅ Операция сохранена прямо в Firebase!", "success");
+
+          // Test reading back
+          const snapshot = await database
+            .ref(`${familyPath}/${testOperation.id}`)
+            .once("value");
+          if (snapshot.exists()) {
+            log("✅ Операция успешно прочитана из Firebase!", "success");
+            log(
+              `📊 Данные: ${JSON.stringify(snapshot.val(), null, 2)}`,
+              "info"
+            );
+          } else {
+            log("❌ Операция не найдена при чтении!", "error");
+          }
+        } catch (error) {
+          log(`❌ Ошибка прямого теста: ${error.message}`, "error");
+        }
+      }
+
+      async function testEnhancedStorage() {
+        log("🔧 Тест EnhancedStorage...", "info");
+
+        try {
+          // Initialize EnhancedStorage
+          await EnhancedStorage.save({
+            operations: [
+              {
+                id: Date.now(),
+                type: "expense",
+                amount: 200,
+                person: "valeria",
+                category: "test",
+                description: "Тест EnhancedStorage",
+                date: new Date().toISOString().split("T")[0],
+                timestamp: new Date().toISOString(),
+              },
+            ],
+            categories: { income: ["test"], expense: ["test"] },
+            limits: {},
+            goals: [],
+          });
+
+          log("✅ EnhancedStorage сохранение успешно!", "success");
+
+          // Try to load back
+          const data = await EnhancedStorage.load();
+          if (data && data.operations && data.operations.length > 0) {
+            log("✅ EnhancedStorage загрузка успешна!", "success");
+            log(`📊 Операций найдено: ${data.operations.length}`, "info");
+          } else {
+            log("❌ EnhancedStorage не вернул данные!", "error");
+          }
+        } catch (error) {
+          log(`❌ Ошибка EnhancedStorage: ${error.message}`, "error");
+        }
+      }
+
+      async function checkFirebaseData() {
+        log("🔍 Проверяем все данные в Firebase...", "info");
+
+        try {
+          await firebase.auth().signInAnonymously();
+          const database = firebase.database();
+
+          // Check family path
+          const familySnapshot = await database
+            .ref("families/artur-valeria-budget")
+            .once("value");
+          if (familySnapshot.exists()) {
+            const familyData = familySnapshot.val();
+            log("✅ Найдены данные семьи в Firebase!", "success");
+            log(
+              `📊 Структура: ${JSON.stringify(
+                Object.keys(familyData),
+                null,
+                2
+              )}`,
+              "info"
+            );
+
+            if (familyData.budgetData && familyData.budgetData.operations) {
+              const operations = familyData.budgetData.operations;
+              log(
+                `💰 Найдено операций: ${Object.keys(operations).length}`,
+                "info"
+              );
+              Object.values(operations).forEach((op, index) => {
+                log(
+                  `  ${index + 1}. ${op.type} - ${op.amount} zł (${op.person})`,
+                  "info"
+                );
+              });
+            } else {
+              log("⚠️ Операции не найдены в budgetData", "error");
+            }
+          } else {
+            log("❌ Данные семьи не найдены в Firebase!", "error");
+          }
+
+          // Check root level
+          const rootSnapshot = await database
+            .ref()
+            .limitToFirst(10)
+            .once("value");
+          if (rootSnapshot.exists()) {
+            const rootData = rootSnapshot.val();
+            log(
+              `📋 Корневые данные: ${JSON.stringify(
+                Object.keys(rootData),
+                null,
+                2
+              )}`,
+              "info"
+            );
+          } else {
+            log("❌ Корневые данные не найдены!", "error");
+          }
+        } catch (error) {
+          log(`❌ Ошибка проверки: ${error.message}`, "error");
+        }
+      }
+
+      // Auto-run
+      setTimeout(() => {
+        log("🚀 Автоматический запуск диагностики...", "info");
+        checkFirebaseData();
+      }, 2000);
+    </script>
+  </body>
+</html>

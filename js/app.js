@@ -204,11 +204,33 @@ class BudgetApp {
     console.log(`%c[BUDGET-APP] 💾 saveData() начат...`, 'color: #ff9800; font-weight: bold;');
     console.log(`%c[BUDGET-APP] 📊 Текущие данные:`, 'color: #ff9800;', this.data);
     console.log(`%c[BUDGET-APP] 🔍 Family ID: artur-valeria-budget`, 'color: #2196F3; font-weight: bold;');
+    console.log(`%c[BUDGET-APP] 📈 Количество операций: ${this.data.operations.length}`, 'color: #2196F3; font-weight: bold;');
     
     try {
       console.log(`%c[BUDGET-APP] ☁️ Попытка сохранения через EnhancedStorage...`, 'color: #2196F3;');
-      await EnhancedStorage.save(this.data);
-      console.log(`%c[BUDGET-APP] ✅ Данные сохранены через EnhancedStorage!`, 'color: #4CAF50; font-weight: bold;');
+      console.log(`%c[BUDGET-APP] 🎯 Данные для сохранения:`, 'color: #2196F3;', JSON.stringify(this.data, null, 2));
+      
+      const saveResult = await EnhancedStorage.save(this.data);
+      
+      if (saveResult) {
+        console.log(`%c[BUDGET-APP] ✅ Данные сохранены через EnhancedStorage!`, 'color: #4CAF50; font-weight: bold;');
+        
+        // Verify save by trying to load back
+        setTimeout(async () => {
+          try {
+            const loadedData = await EnhancedStorage.load();
+            if (loadedData && loadedData.operations) {
+              console.log(`%c[BUDGET-APP] ✅ Проверка: загружено операций: ${loadedData.operations.length}`, 'color: #4CAF50;');
+            } else {
+              console.log(`%c[BUDGET-APP] ⚠️ Проверка: данные не загрузились!`, 'color: #ff9800;');
+            }
+          } catch (verifyError) {
+            console.error(`%c[BUDGET-APP] ❌ Ошибка проверки сохранения:`, 'color: #f44336;', verifyError);
+          }
+        }, 1000);
+      } else {
+        console.log(`%c[BUDGET-APP] ⚠️ EnhancedStorage.save() вернул false`, 'color: #ff9800;');
+      }
     } catch (error) {
       console.error('%c[BUDGET-APP] ❌ Ошибка сохранения через EnhancedStorage:', 'color: #f44336; font-weight: bold;', error);
       // Fallback to localStorage
