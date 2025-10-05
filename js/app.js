@@ -237,7 +237,7 @@ class BudgetApp {
   }
 
   // ===== OPERATIONS =====
-  addOperation(type, formData) {
+  async addOperation(type, formData) {
     console.log(`%c[BUDGET-APP] 📝 addOperation вызван с типом: ${type}`, 'color: #2196F3; font-weight: bold;');
     console.log('%c[BUDGET-APP] 📋 Данные формы:', 'color: #2196F3;', formData);
     
@@ -259,7 +259,15 @@ class BudgetApp {
     
     this.data.operations.unshift(operation);
     console.log(`%c[BUDGET-APP] 💾 Вызываем saveData()...`, 'color: #ff9800; font-weight: bold;');
+    
+    // Save main data
     this.saveData();
+    
+    // Also save operation by device for Firebase Console visibility
+    if (EnhancedStorage.isCloudAvailable()) {
+      EnhancedStorage.saveOperationByDevice(operation, this.deviceInfo);
+    }
+    
     this.showNotification(
       `${type === "income" ? "Доход" : "Расход"} добавлен успешно!`,
       "success"

@@ -90,23 +90,8 @@ const CloudStorage = {
     try {
       console.log(`📤 Сохраняем данные для пользователя: ${this.userId}`);
       
-      // Create readable structure for Firebase Console
-      const budgetData = {
-        metadata: {
-          lastModified: firebase.database.ServerValue.TIMESTAMP,
-          version: APP_CONFIG.version,
-          userId: this.userId,
-          totalOperations: data.operations ? data.operations.length : 0,
-          lastOperation: data.operations && data.operations.length > 0 ? data.operations[0] : null
-        },
-        operations: this.formatOperationsForFirebase(data.operations || []),
-        goals: data.goals || [],
-        limits: data.limits || {},
-        categories: data.categories || {},
-        settings: data.settings || {}
-      };
-      
-      await database.ref(`users/${this.userId}/budgetData`).set(budgetData);
+      // Save full data structure for app to work
+      await database.ref(`users/${this.userId}/budgetData`).set(data);
       
       // Also save to localStorage as backup
       StorageUtils.set(APP_CONFIG.storageKey, data);
@@ -119,22 +104,32 @@ const CloudStorage = {
     }
   },
 
-  // Format operations for better Firebase Console readability
-  formatOperationsForFirebase(operations) {
-    const formatted = {};
-    operations.forEach((op, index) => {
-      const key = `${op.date}_${op.id}`;
-      formatted[key] = {
-        ...op,
-        index: index,
-        readableDate: new Date(op.date).toLocaleDateString('ru-RU'),
-        readableAmount: `${op.amount} zł`,
-        readableType: op.type === 'income' ? 'ДОХОД' : 'РАСХОД',
-        readablePerson: op.person === 'artur' ? 'АРТУР' : 'ВАЛЕРИЯ',
-        deviceInfo: op.device ? `${op.device.name} (${op.device.type})` : 'Unknown'
+  // Save operation by device (for Firebase Console visibility)
+  saveOperationByDevice(operation, deviceInfo) {
+    if (!this.isAvailable || !this.userId || !database) {
+      return;
+    }
+
+    try {
+      const deviceType = deviceInfo.name; // Desktop, Mobile, Tablet
+      const operationData = {
+        id: operation.id,
+        type: operation.type === 'income' ? 'ДОХОД' : 'РАСХОД',
+        amount: `${operation.amount} zł`,
+        person: operation.person === 'artur' ? 'АРТУР' : 'ВАЛЕРИЯ',
+        category: operation.category,
+        description: operation.description || '',
+        date: operation.date,
+        readableDate: new Date(operation.date).toLocaleDateString('ru-RU'),
+        time: new Date().toLocaleTimeString('ru-RU')
       };
-    });
-    return formatted;
+
+      // Save to device-specific path
+      database.ref(`users/Device/${deviceType}/Operations/${operation.id}`).set(operationData);
+      console.log(`📱 Operation saved to ${deviceType} section`);
+    } catch (error) {
+      console.error('❌ Error saving operation by device:', error);
+    }
   },
 
   // Load data from cloud (Realtime Database)
@@ -151,11 +146,8 @@ const CloudStorage = {
       const snapshot = await database.ref(`users/${this.userId}/budgetData`).once('value');
       
       if (snapshot.exists()) {
-        const cloudData = snapshot.val();
+        const data = snapshot.val();
         console.log('✅ Data loaded from Firebase Realtime Database');
-        
-        // Convert Firebase format back to app format
-        const data = this.convertFromFirebaseFormat(cloudData);
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
@@ -178,24 +170,6 @@ const CloudStorage = {
       console.log('🔄 Fallback: загружаем из localStorage');
       return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
-  },
-
-  // Convert Firebase format back to app format
-  convertFromFirebaseFormat(firebaseData) {
-    const data = {
-      operations: [],
-      goals: firebaseData.goals || [],
-      limits: firebaseData.limits || {},
-      categories: firebaseData.categories || {},
-      settings: firebaseData.settings || {}
-    };
-
-    // Convert operations back from Firebase format
-    if (firebaseData.operations) {
-      data.operations = Object.values(firebaseData.operations).sort((a, b) => b.id - a.id);
-    }
-
-    return data;
   },
 
   // Check if cloud data is newer than local
@@ -267,11 +241,8 @@ const CloudStorage = {
     
     const listener = dataRef.on('value', (snapshot) => {
       if (snapshot.exists()) {
-        const firebaseData = snapshot.val();
-        console.log('🔄 Получены обновления из Firebase:', firebaseData);
-        
-        // Convert Firebase format to app format
-        const data = this.convertFromFirebaseFormat(firebaseData);
+        const data = snapshot.val();
+        console.log('🔄 Получены обновления из Firebase:', data);
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
@@ -353,6 +324,11 @@ const EnhancedStorage = {
 
   isCloudAvailable() {
     return CloudStorage.isConnected();
+  },
+
+  // Save operation by device for Firebase Console visibility
+  saveOperationByDevice(operation, deviceInfo) {
+    return CloudStorage.saveOperationByDevice(operation, deviceInfo);
   },
 
   // Setup real-time synchronization

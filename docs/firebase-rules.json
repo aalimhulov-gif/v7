@@ -5,25 +5,32 @@
     "users": {
       "$userId": {
         ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId",
-        "budgetData": {
-          ".validate": "newData.hasChildren(['metadata'])",
-          "metadata": {
-            ".validate": "newData.hasChildren(['lastModified', 'userId'])"
-          },
-          "operations": {
-            "$operationKey": {
-              ".validate": "newData.hasChildren(['id', 'type', 'amount'])"
+        ".write": "auth != null && auth.uid == $userId"
+      },
+      "Device": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "Desktop": {
+          "Operations": {
+            "$operationId": {
+              ".validate": "newData.hasChildren(['type', 'amount', 'person'])"
+            }
+          }
+        },
+        "Mobile": {
+          "Operations": {
+            "$operationId": {
+              ".validate": "newData.hasChildren(['type', 'amount', 'person'])"
+            }
+          }
+        },
+        "Tablet": {
+          "Operations": {
+            "$operationId": {
+              ".validate": "newData.hasChildren(['type', 'amount', 'person'])"
             }
           }
         }
-      }
-    },
-    "budgets": {
-      "$userId": {
-        ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId",
-        ".validate": "newData.hasChildren(['data', 'lastModified', 'version'])"
       }
     }
   }
