@@ -196,33 +196,6 @@ const CloudStorage = {
     }
   },
 
-  // Check if cloud data is newer than local
-  async checkForUpdates() {
-    if (!this.isAvailable || !this.userId || !database) {
-      return false;
-    }
-
-    try {
-      const snapshot = await database.ref(`budgets/${this.userId}/lastModified`).once('value');
-      
-      if (snapshot.exists()) {
-        const cloudTimestamp = snapshot.val();
-        const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
-        
-        if (!localData || !localData.lastModified) {
-          return true; // Cloud has data, local doesn't
-        }
-        
-        return cloudTimestamp > localData.lastModified;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error('Update check error:', error);
-      return false;
-    }
-  },
-
   // Check connection status
   isConnected() {
     return this.isAvailable;
@@ -245,7 +218,7 @@ const CloudStorage = {
       console.log('👂 Real-time listener triggered');
       if (snapshot.exists()) {
         const data = snapshot.val();
-        console.log('� Получены обновления из Firebase:', data);
+        console.log('📡 Получены обновления из Firebase:', data);
         console.log(`📊 Операций в данных: ${data.operations ? data.operations.length : 0}`);
         
         // Save to localStorage as backup
@@ -288,35 +261,35 @@ const EnhancedStorage = {
       console.log('💾 Using localStorage only');
     }
     
-    return true;
+    return cloudInitialized;
   },
 
   async save(data) {
     console.log('💾 EnhancedStorage.save() - Сохранение данных...');
     
     // Always save to localStorage first
-    const localSuccess = StorageUtils.set(APP_CONFIG.storageKey, data);
+    StorageUtils.set(APP_CONFIG.storageKey, data);
     
     // Try to save to cloud if available
-    if (CloudStorage.isAvailable) {
-      const cloudSuccess = await CloudStorage.save(data);
-      console.log(`Результат сохранения: localStorage=${localSuccess}, cloud=${cloudSuccess}`);
-      return cloudSuccess;
+    if (CloudStorage.isConnected()) {
+      return await CloudStorage.save(data);
     }
     
-    console.log(`Результат сохранения: localStorage=${localSuccess}, cloud=unavailable`);
-    return localSuccess;
+    return true;
   },
 
   async load() {
     console.log('📥 EnhancedStorage.load() - Загрузка данных...');
     
-    // Try cloud first if available
-    if (CloudStorage.isAvailable) {
-      const cloudData = await CloudStorage.load();
-      if (cloudData) {
-        console.log('📊 Данные загружены из облака');
-        return cloudData;
+    if (CloudStorage.isConnected()) {
+      try {
+        const cloudData = await CloudStorage.load();
+        if (cloudData) {
+          console.log('📊 Данные загружены из облака');
+          return cloudData;
+        }
+      } catch (error) {
+        console.error('Cloud load error:', error);
       }
     }
     
@@ -324,10 +297,6 @@ const EnhancedStorage = {
     const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
     console.log('📊 Данные загружены из localStorage');
     return localData;
-  },
-
-  async sync() {
-    return await CloudStorage.sync();
   },
 
   isCloudAvailable() {
