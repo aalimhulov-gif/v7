@@ -40,7 +40,13 @@
     <header class="header">
       <div class="container">
         <div class="header-content">
-          <div class="logo"><i class="fas fa-wallet"></i> Бюджет</div>
+          <div class="logo">
+            <i class="fas fa-wallet"></i> Бюджет
+            <div class="sync-status" id="syncStatus">
+              <i class="fas fa-wifi" id="syncIcon"></i>
+              <span id="syncText">Подключение...</span>
+            </div>
+          </div>
           <button class="burger-menu" onclick="toggleSidebar()">
             <i class="fas fa-bars"></i>
           </button>

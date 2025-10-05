@@ -19,6 +19,108 @@
   font-size: 24px;
   font-weight: 700;
   color: var(--accent-primary);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: 20px;
+  transition: var(--transition);
+}
+
+.sync-status.connected {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4CAF50;
+}
+
+.sync-status.connecting {
+  background: rgba(255, 152, 0, 0.2);
+  color: #FF9800;
+}
+
+.sync-status.error {
+  background: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.sync-status.syncing {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196F3;
+}
+
+#syncIcon {
+  font-size: 10px;
+}
+
+.sync-status.connecting #syncIcon {
+  animation: pulse 1.5s infinite;
+}
+
+.sync-status.syncing #syncIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Sync notification */
+.sync-notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: rgba(33, 150, 243, 0.95);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  animation: slideInRight 0.3s ease-out, slideOutRight 0.3s ease-in 2.7s forwards;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sync-notification i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
 }
 
 .burger-menu {

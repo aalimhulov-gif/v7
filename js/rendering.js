@@ -24,6 +24,7 @@ BudgetApp.prototype.renderOperations = function() {
               <div class="operation-meta">
                 ${this.getPersonName(op.person)} • ${this.formatDate(op.date)}
                 ${op.description ? ` • ${op.description}` : ""}
+                ${op.device ? ` • <i class="${op.device.icon}" title="Добавлено с ${op.device.name}"></i>` : ""}
               </div>
             </div>
             <div class="operation-amount ${op.type}">

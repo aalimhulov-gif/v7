@@ -23,7 +23,37 @@ class BudgetApp {
         currency: "zł",
       },
     };
+    
+    // Device info for real-time tracking
+    this.deviceInfo = this.getDeviceInfo();
+    console.log('🔧 Device Info:', this.deviceInfo);
+    
     // Don't call init() here - it will be called manually as async
+  }
+
+  // Get device information
+  getDeviceInfo() {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isTablet = /iPad/i.test(navigator.userAgent) || (isMobile && window.innerWidth > 600);
+    
+    let deviceType = 'desktop';
+    let deviceIcon = 'fas fa-desktop';
+    
+    if (isTablet) {
+      deviceType = 'tablet';
+      deviceIcon = 'fas fa-tablet-alt';
+    } else if (isMobile) {
+      deviceType = 'mobile';
+      deviceIcon = 'fas fa-mobile-alt';
+    }
+    
+    return {
+      type: deviceType,
+      icon: deviceIcon,
+      name: `${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)}`,
+      timestamp: Date.now(),
+      userAgent: navigator.userAgent.substring(0, 50) + '...'
+    };
   }
 
   // ===== INITIALIZATION =====
@@ -64,19 +94,74 @@ class BudgetApp {
 
   // ===== REAL-TIME SYNCHRONIZATION =====
   setupRealtimeSync() {
+    this.updateSyncStatus('connecting', 'Подключение...');
+    
     if (EnhancedStorage.isCloudAvailable()) {
       console.log('🔄 Настройка real-time синхронизации...');
       const listener = EnhancedStorage.setupRealtimeSync((newData) => {
         console.log('📡 Получены обновления данных:', newData);
+        this.updateSyncStatus('syncing', 'Синхронизация...');
+        
         if (newData) {
           this.data = { ...this.data, ...newData };
           this.updateUI();
+          this.showSyncNotification('Данные обновлены с другого устройства');
         }
+        
+        setTimeout(() => {
+          this.updateSyncStatus('connected', 'Подключено');
+        }, 500);
       });
       
       // Store listener reference for cleanup
       this.realtimeListener = listener;
+      this.updateSyncStatus('connected', 'Подключено');
+    } else {
+      this.updateSyncStatus('error', 'Офлайн');
     }
+  }
+
+  updateSyncStatus(status, text) {
+    const syncStatus = document.getElementById('syncStatus');
+    const syncIcon = document.getElementById('syncIcon');
+    const syncText = document.getElementById('syncText');
+    
+    if (syncStatus && syncIcon && syncText) {
+      syncStatus.className = `sync-status ${status}`;
+      syncText.textContent = text;
+      
+      switch(status) {
+        case 'connected':
+          syncIcon.className = 'fas fa-wifi';
+          break;
+        case 'connecting':
+          syncIcon.className = 'fas fa-wifi';
+          break;
+        case 'syncing':
+          syncIcon.className = 'fas fa-sync-alt';
+          break;
+        case 'error':
+          syncIcon.className = 'fas fa-wifi-slash';
+          break;
+      }
+    }
+  }
+
+  showSyncNotification(message) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'sync-notification';
+    notification.innerHTML = `
+      <i class="fas fa-sync-alt"></i>
+      <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
   }
 
   updateUI() {
@@ -148,6 +233,8 @@ class BudgetApp {
     console.log(`%c[BUDGET-APP] 📝 addOperation вызван с типом: ${type}`, 'color: #2196F3; font-weight: bold;');
     console.log('%c[BUDGET-APP] 📋 Данные формы:', 'color: #2196F3;', formData);
     
+    this.updateSyncStatus('syncing', 'Сохранение...');
+    
     const operation = {
       id: Date.now(),
       type: type,
@@ -157,6 +244,7 @@ class BudgetApp {
       description: formData.description || "",
       date: formData.date,
       timestamp: new Date().toISOString(),
+      device: this.deviceInfo, // Add device info
     };
 
     console.log(`%c[BUDGET-APP] ✏️ Создана операция:`, 'color: #4CAF50; font-weight: bold;', operation);
@@ -168,6 +256,10 @@ class BudgetApp {
       `${type === "income" ? "Доход" : "Расход"} добавлен успешно!`,
       "success"
     );
+    
+    setTimeout(() => {
+      this.updateSyncStatus('connected', 'Подключено');
+    }, 1000);
   }
 
   // ===== BALANCE CALCULATIONS =====

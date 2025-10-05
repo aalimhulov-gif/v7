@@ -36,6 +36,14 @@
 .operation-meta {
   font-size: 12px;
   color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.operation-meta i {
+  color: var(--accent-primary);
+  opacity: 0.7;
 }
 
 .operation-amount {
