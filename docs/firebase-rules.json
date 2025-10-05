@@ -2,10 +2,13 @@
   "rules": {
     ".read": "auth != null",
     ".write": false,
-    "users": {
-      "$userId": {
-        ".read": "auth != null && auth.uid == $userId",
-        ".write": "auth != null && auth.uid == $userId"
+    "families": {
+      "artur-valeria-budget": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "budgetData": {
+          ".validate": "true"
+        }
       },
       "Device": {
         ".read": "auth != null",

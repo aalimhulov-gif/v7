@@ -43,6 +43,7 @@ function initializeFirebase() {
 const CloudStorage = {
   isAvailable: false,
   userId: null,
+  familyId: 'artur-valeria-budget', // Общий ID для семьи
 
   // Initialize cloud storage
   async init() {
@@ -62,6 +63,7 @@ const CloudStorage = {
       this.userId = userCredential.user.uid;
       this.isAvailable = true;
       console.log(`✅ Cloud storage initialized successfully with user: ${this.userId}`);
+      console.log(`👨‍👩‍👧‍👦 Using family ID: ${this.familyId}`);
       return true;
     } catch (error) {
       console.error('❌ Cloud storage initialization failed:', error);
@@ -82,16 +84,16 @@ const CloudStorage = {
   async save(data) {
     console.log('💾 CloudStorage.save() - Попытка сохранения данных...');
     
-    if (!this.isAvailable || !this.userId || !database) {
+    if (!this.isAvailable || !database) {
       console.log('⚠️ Cloud storage недоступен, используем localStorage');
       return StorageUtils.set(APP_CONFIG.storageKey, data);
     }
 
     try {
-      console.log(`📤 Сохраняем данные для пользователя: ${this.userId}`);
+      console.log(`📤 Сохраняем данные для семьи: ${this.familyId}`);
       
       // Save full data structure for app to work
-      await database.ref(`users/${this.userId}/budgetData`).set(data);
+      await database.ref(`families/${this.familyId}/budgetData`).set(data);
       
       // Also save to localStorage as backup
       StorageUtils.set(APP_CONFIG.storageKey, data);
@@ -106,7 +108,7 @@ const CloudStorage = {
 
   // Save operation by device (for Firebase Console visibility)
   saveOperationByDevice(operation, deviceInfo) {
-    if (!this.isAvailable || !this.userId || !database) {
+    if (!this.isAvailable || !database) {
       return;
     }
 
@@ -125,7 +127,7 @@ const CloudStorage = {
       };
 
       // Save to device-specific path
-      database.ref(`users/Device/${deviceType}/Operations/${operation.id}`).set(operationData);
+      database.ref(`families/Device/${deviceType}/Operations/${operation.id}`).set(operationData);
       console.log(`📱 Operation saved to ${deviceType} section`);
     } catch (error) {
       console.error('❌ Error saving operation by device:', error);
@@ -136,14 +138,14 @@ const CloudStorage = {
   async load() {
     console.log('📥 CloudStorage.load() - Попытка загрузки данных...');
     
-    if (!this.isAvailable || !this.userId || !database) {
+    if (!this.isAvailable || !database) {
       console.log('⚠️ Cloud storage недоступен, используем localStorage');
       return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
 
     try {
-      console.log(`📥 Загружаем данные для пользователя: ${this.userId}`);
-      const snapshot = await database.ref(`users/${this.userId}/budgetData`).once('value');
+      console.log(`📥 Загружаем данные для семьи: ${this.familyId}`);
+      const snapshot = await database.ref(`families/${this.familyId}/budgetData`).once('value');
       
       if (snapshot.exists()) {
         const data = snapshot.val();
@@ -230,14 +232,14 @@ const CloudStorage = {
 
   // Setup real-time listener for data changes
   setupRealtimeListener(callback) {
-    if (!this.isAvailable || !this.userId || !database) {
+    if (!this.isAvailable || !database) {
       console.log('⚠️ Real-time listener not available');
       return null;
     }
 
     console.log('🔄 Настройка real-time слушателя для синхронизации...');
     
-    const dataRef = database.ref(`users/${this.userId}/budgetData`);
+    const dataRef = database.ref(`families/${this.familyId}/budgetData`);
     
     const listener = dataRef.on('value', (snapshot) => {
       if (snapshot.exists()) {
@@ -261,8 +263,8 @@ const CloudStorage = {
 
   // Remove real-time listener
   removeRealtimeListener(listener) {
-    if (listener && this.isAvailable && this.userId && database) {
-      database.ref(`users/${this.userId}/budgetData`).off('value', listener);
+    if (listener && this.isAvailable && database) {
+      database.ref(`families/${this.familyId}/budgetData`).off('value', listener);
       console.log('🔄 Real-time слушатель отключен');
     }
   }
