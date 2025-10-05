@@ -12,10 +12,21 @@ function initializeFirebase() {
   }
   
   try {
-    // Firebase should already be initialized by firebase-config.js
-    if (!firebase.apps.length) {
-      console.error('❌ Firebase не инициализирован');
-      return false;
+    // Check if Firebase is initialized
+    let app;
+    try {
+      app = firebase.app(); // This will throw if not initialized
+      console.log('✅ Firebase уже инициализирован:', app.name);
+    } catch (error) {
+      // Firebase not initialized, try to initialize
+      console.log('🔄 Пытаемся инициализировать Firebase...');
+      if (typeof firebaseConfig !== 'undefined') {
+        app = firebase.initializeApp(firebaseConfig);
+        console.log('✅ Firebase инициализирован:', app.name);
+      } else {
+        console.error('❌ firebaseConfig не найден');
+        return false;
+      }
     }
     
     // Use Realtime Database instead of Firestore

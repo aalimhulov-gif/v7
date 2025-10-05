@@ -180,14 +180,22 @@ function clearAllData() {
 
 // ===== APP INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", async () => {
+  console.log('🚀 DOM загружен, ждем загрузки Firebase...');
+  
+  // Wait a bit for Firebase to load
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
   // Initialize the main app
+  console.log('📱 Создаем экземпляр BudgetApp...');
   app = new BudgetApp();
   
   // Wait for async initialization to complete
   try {
+    console.log('⚙️ Запускаем app.init()...');
     await app.init();
+    console.log('✅ Приложение успешно инициализировано!');
   } catch (error) {
-    // Silent error handling
+    console.error('❌ Ошибка инициализации приложения:', error);
   }
 
   // Setup modal event listeners

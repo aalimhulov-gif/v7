@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Firebase Debug Test</title>
+    <style>
+      body {
+        font-family: Arial;
+        padding: 20px;
+        background: #f0f0f0;
+      }
+      .log {
+        padding: 8px;
+        margin: 5px 0;
+        border-radius: 4px;
+        font-family: monospace;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      .warning {
+        background: #fff3cd;
+        color: #856404;
+      }
+      button {
+        padding: 10px 15px;
+        margin: 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      h1 {
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔥 Firebase Отладка</h1>
+    <button onclick="checkFirebaseStep1()">1. Проверить Firebase SDK</button>
+    <button onclick="checkFirebaseStep2()">2. Проверить инициализацию</button>
+    <button onclick="checkFirebaseStep3()">3. Тест подключения</button>
+    <button onclick="runFullTest()">🚀 Полный тест</button>
+    <div id="log"></div>
+
+    <!-- Firebase CDN - точно такие же как в основном приложении -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      function log(message, type = "info") {
+        const div = document.createElement("div");
+        div.className = `log ${type}`;
+        div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+        document.getElementById("log").appendChild(div);
+        console.log(`[${type.toUpperCase()}] ${message}`);
+      }
+
+      // Firebase конфигурация
+      const firebaseConfig = {
+        apiKey: "AIzaSyAiB6veVSOVDVz5Nx8xZ9Eb_6dEp7JUTBo",
+        authDomain: "budgetami.firebaseapp.com",
+        databaseURL:
+          "https://budgetami-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "budgetami",
+        storageBucket: "budgetami.firebasestorage.app",
+        messagingSenderId: "211374589260",
+        appId: "1:211374589260:web:1570eb8b1ddd56a8f64eca",
+      };
+
+      function checkFirebaseStep1() {
+        log("🔍 Проверяем загрузку Firebase SDK...", "info");
+
+        if (typeof firebase === "undefined") {
+          log("❌ Firebase SDK не загружен!", "error");
+          return false;
+        }
+
+        log("✅ Firebase SDK загружен", "success");
+        log(
+          `📦 Firebase версия: ${firebase.SDK_VERSION || "неизвестно"}`,
+          "info"
+        );
+
+        // Проверяем доступные сервисы
+        const services = [];
+        if (firebase.app) services.push("app");
+        if (firebase.auth) services.push("auth");
+        if (firebase.database) services.push("database");
+
+        log(`🛠️ Доступные сервисы: ${services.join(", ")}`, "info");
+        return true;
+      }
+
+      function checkFirebaseStep2() {
+        log("🔧 Проверяем инициализацию Firebase...", "info");
+
+        if (!checkFirebaseStep1()) return false;
+
+        try {
+          // Проверяем, инициализирован ли Firebase
+          let app;
+          try {
+            app = firebase.app();
+            log("✅ Firebase уже инициализирован", "success");
+            log(`📱 App name: ${app.name}`, "info");
+          } catch (error) {
+            log("🔄 Firebase не инициализирован, инициализируем...", "warning");
+            app = firebase.initializeApp(firebaseConfig);
+            log("✅ Firebase инициализирован успешно!", "success");
+            log(`📱 App name: ${app.name}`, "info");
+          }
+
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка инициализации: ${error.message}`, "error");
+          return false;
+        }
+      }
+
+      async function checkFirebaseStep3() {
+        log("🌐 Тестируем подключение к Firebase...", "info");
+
+        if (!checkFirebaseStep2()) return false;
+
+        try {
+          // Тест аутентификации
+          log("🔐 Тестируем анонимную аутентификацию...", "info");
+          const auth = firebase.auth();
+          await auth.signInAnonymously();
+          log(
+            `✅ Аутентификация успешна! User ID: ${auth.currentUser.uid}`,
+            "success"
+          );
+
+          // Тест базы данных
+          log("💾 Тестируем запись в базу данных...", "info");
+          const database = firebase.database();
+          const testRef = database.ref("debug-test");
+
+          const testData = {
+            timestamp: Date.now(),
+            message: "Debug test from diagnostic page",
+            userAgent: navigator.userAgent.substring(0, 50),
+          };
+
+          await testRef.set(testData);
+          log("✅ Запись в базу данных успешна", "success");
+
+          // Тест чтения
+          const snapshot = await testRef.once("value");
+          const readData = snapshot.val();
+
+          if (readData && readData.timestamp === testData.timestamp) {
+            log("✅ Чтение из базы данных успешно", "success");
+          } else {
+            log("❌ Данные не совпадают при чтении", "error");
+          }
+
+          // Очистка
+          await testRef.remove();
+          log("🧹 Тестовые данные удалены", "info");
+
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка подключения: ${error.message}`, "error");
+          log(`❌ Error code: ${error.code || "неизвестно"}`, "error");
+          return false;
+        }
+      }
+
+      async function runFullTest() {
+        log("🚀 === ЗАПУСК ПОЛНОГО ТЕСТА ===", "info");
+        document.getElementById("log").innerHTML = "";
+
+        const step1 = checkFirebaseStep1();
+        if (!step1) {
+          log("🛑 Тест остановлен на шаге 1", "error");
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const step2 = checkFirebaseStep2();
+        if (!step2) {
+          log("🛑 Тест остановлен на шаге 2", "error");
+          return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const step3 = await checkFirebaseStep3();
+        if (!step3) {
+          log("🛑 Тест остановлен на шаге 3", "error");
+          return;
+        }
+
+        log("🎉 === ВСЕ ТЕСТЫ ПРОШЛИ УСПЕШНО! ===", "success");
+        log(
+          "✅ Firebase полностью работает и готов к использованию",
+          "success"
+        );
+      }
+
+      // Автоматический запуск при загрузке
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          log("🔄 Автоматическая проверка Firebase...", "info");
+          checkFirebaseStep1();
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>
