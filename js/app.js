@@ -80,18 +80,26 @@ class BudgetApp {
   }
 
   async saveData() {
+    console.log(`%c[BUDGET-APP] 💾 saveData() начат...`, 'color: #ff9800; font-weight: bold;');
+    console.log(`%c[BUDGET-APP] 📊 Текущие данные:`, 'color: #ff9800;', this.data);
+    
     try {
+      console.log(`%c[BUDGET-APP] ☁️ Попытка сохранения через EnhancedStorage...`, 'color: #2196F3;');
       await EnhancedStorage.save(this.data);
+      console.log(`%c[BUDGET-APP] ✅ Данные сохранены через EnhancedStorage!`, 'color: #4CAF50; font-weight: bold;');
     } catch (error) {
-      console.error('Save data error:', error);
+      console.error('%c[BUDGET-APP] ❌ Ошибка сохранения через EnhancedStorage:', 'color: #f44336; font-weight: bold;', error);
       // Fallback to localStorage
+      console.log(`%c[BUDGET-APP] 🔄 Fallback: сохраняем в localStorage...`, 'color: #ff9800;');
       localStorage.setItem("budgetAppData", JSON.stringify(this.data));
     }
     
+    console.log(`%c[BUDGET-APP] 🔄 Обновляем UI...`, 'color: #9c27b0;');
     this.updateBalances();
     this.renderOperations();
     this.renderLimits();
     this.renderGoals();
+    console.log(`%c[BUDGET-APP] ✅ saveData() завершен!`, 'color: #4CAF50; font-weight: bold;');
   }
 
   showStorageStatus() {
@@ -109,6 +117,9 @@ class BudgetApp {
 
   // ===== OPERATIONS =====
   addOperation(type, formData) {
+    console.log(`%c[BUDGET-APP] 📝 addOperation вызван с типом: ${type}`, 'color: #2196F3; font-weight: bold;');
+    console.log('%c[BUDGET-APP] 📋 Данные формы:', 'color: #2196F3;', formData);
+    
     const operation = {
       id: Date.now(),
       type: type,
@@ -120,7 +131,10 @@ class BudgetApp {
       timestamp: new Date().toISOString(),
     };
 
+    console.log(`%c[BUDGET-APP] ✏️ Создана операция:`, 'color: #4CAF50; font-weight: bold;', operation);
+    
     this.data.operations.unshift(operation);
+    console.log(`%c[BUDGET-APP] 💾 Вызываем saveData()...`, 'color: #ff9800; font-weight: bold;');
     this.saveData();
     this.showNotification(
       `${type === "income" ? "Доход" : "Расход"} добавлен успешно!`,

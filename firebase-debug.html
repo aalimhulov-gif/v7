@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔧 Firebase Debug Console</title>
+    <style>
+      body {
+        font-family: "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #1a1a1a;
+        color: #fff;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .debug-panel {
+        background: #2d2d2d;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4caf50;
+      }
+      .status {
+        padding: 12px;
+        border-radius: 6px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+      .success {
+        background: #4caf50;
+        color: #fff;
+      }
+      .error {
+        background: #f44336;
+        color: #fff;
+      }
+      .warning {
+        background: #ff9800;
+        color: #fff;
+      }
+      .info {
+        background: #2196f3;
+        color: #fff;
+      }
+
+      button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin: 8px;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #45a049;
+      }
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+
+      .log-container {
+        background: #000;
+        border-radius: 6px;
+        padding: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        border: 1px solid #333;
+      }
+
+      .config-display {
+        background: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 4px;
+        padding: 15px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        white-space: pre-wrap;
+        overflow-x: auto;
+      }
+
+      .step {
+        background: #333;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 10px 0;
+        border-left: 4px solid #ff9800;
+      }
+
+      .critical {
+        background: #d32f2f;
+        color: white;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔧 Firebase Debug Console</h1>
+
+      <div class="critical">
+        ⚠️ ДИАГНОСТИКА СИНХРОНИЗАЦИИ: Проверяем почему данные не попадают в
+        Realtime Database
+      </div>
+
+      <div class="debug-panel">
+        <h3>📋 Текущая конфигурация Firebase</h3>
+        <div id="configDisplay" class="config-display">
+          Загрузка конфигурации...
+        </div>
+      </div>
+
+      <div class="debug-panel">
+        <h3>🧪 Пошаговая диагностика</h3>
+        <div id="mainStatus" class="status info">Готов к диагностике...</div>
+
+        <button onclick="step1_testSDK()">Шаг 1: Проверить Firebase SDK</button>
+        <button onclick="step2_testConfig()">
+          Шаг 2: Проверить конфигурацию
+        </button>
+        <button onclick="step3_testAuth()">Шаг 3: Тест аутентификации</button>
+        <button onclick="step4_testDatabase()">
+          Шаг 4: Тест подключения к БД
+        </button>
+        <button onclick="step5_testWrite()">Шаг 5: Тест записи данных</button>
+        <button onclick="runFullTest()">🚀 Полная диагностика</button>
+        <button onclick="clearLog()">🧹 Очистить лог</button>
+      </div>
+
+      <div class="debug-panel">
+        <h3>📝 Лог диагностики</h3>
+        <div id="logContainer" class="log-container"></div>
+      </div>
+
+      <div class="debug-panel">
+        <h3>🔧 Быстрые исправления</h3>
+        <div class="step">
+          <h4>1. Проверьте правила Firebase</h4>
+          <p>
+            Откройте:
+            <a
+              href="https://console.firebase.google.com/project/budgetami/database/budgetami-default-rtdb/rules"
+              target="_blank"
+              style="color: #4caf50"
+              >Firebase Console Rules</a
+            >
+          </p>
+          <p>Правила должны быть:</p>
+          <div class="config-display">
+            { "rules": { "budgets": { "$userId": { ".read": "auth != null &&
+            auth.uid == $userId", ".write": "auth != null && auth.uid ==
+            $userId", ".validate": "newData.hasChildren(['data', 'lastModified',
+            'version'])" } } } }
+          </div>
+        </div>
+
+        <div class="step">
+          <h4>2. Включите Anonymous Authentication</h4>
+          <p>
+            Откройте:
+            <a
+              href="https://console.firebase.google.com/project/budgetami/authentication/providers"
+              target="_blank"
+              style="color: #4caf50"
+              >Firebase Authentication</a
+            >
+          </p>
+          <p>Включите провайдер "Anonymous"</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // Firebase конфигурация (должна совпадать с основным приложением)
+      const firebaseConfig = {
+        apiKey: "AIzaBytzGbv62vVZ6n6cv9EB_SdBf2UPBo",
+        authDomain: "budgetami.firebaseapp.com",
+        databaseURL:
+          "https://budgetami-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "budgetami",
+        storageBucket: "budgetami.firebasestorage.app",
+        messagingSenderId: "447796781652",
+        appId: "1:447796781652:web:0bb500fe4ca84b3b1fbde4",
+      };
+
+      let app, auth, database;
+      let currentUser = null;
+      let testResults = {};
+
+      // Логирование
+      function log(message, type = "info") {
+        const container = document.getElementById("logContainer");
+        const timestamp = new Date().toLocaleTimeString();
+        const colors = {
+          error: "#f44336",
+          success: "#4CAF50",
+          warning: "#ff9800",
+          info: "#2196F3",
+        };
+
+        const logEntry = `<div style="color: ${colors[type]}; margin-bottom: 5px;">
+                [${timestamp}] ${message}
+            </div>`;
+
+        container.innerHTML += logEntry;
+        container.scrollTop = container.scrollHeight;
+        console.log(`[${timestamp}] ${message}`);
+      }
+
+      function updateStatus(message, type) {
+        const statusEl = document.getElementById("mainStatus");
+        statusEl.textContent = message;
+        statusEl.className = `status ${type}`;
+      }
+
+      // Показать конфигурацию
+      function displayConfig() {
+        const configEl = document.getElementById("configDisplay");
+        configEl.textContent = JSON.stringify(firebaseConfig, null, 2);
+      }
+
+      // Шаг 1: Проверка Firebase SDK
+      function step1_testSDK() {
+        log("🔍 Шаг 1: Проверка Firebase SDK...", "info");
+
+        if (typeof firebase === "undefined") {
+          log("❌ Firebase SDK не загружен!", "error");
+          testResults.sdk = false;
+          updateStatus("Firebase SDK не найден", "error");
+          return false;
+        }
+
+        log("✅ Firebase SDK загружен", "success");
+        log(`Firebase версия: ${firebase.SDK_VERSION || "неизвестно"}`, "info");
+        testResults.sdk = true;
+        return true;
+      }
+
+      // Шаг 2: Проверка конфигурации
+      function step2_testConfig() {
+        log("🔍 Шаг 2: Проверка конфигурации...", "info");
+
+        if (!testResults.sdk && !step1_testSDK()) {
+          return false;
+        }
+
+        try {
+          if (!firebase.apps.length) {
+            app = firebase.initializeApp(firebaseConfig);
+            log("✅ Firebase приложение инициализировано", "success");
+          } else {
+            app = firebase.app();
+            log("✅ Firebase приложение уже существует", "success");
+          }
+
+          auth = firebase.auth();
+          database = firebase.database();
+
+          log("✅ Firebase Auth инициализирован", "success");
+          log("✅ Firebase Database инициализирован", "success");
+          log(`📍 Database URL: ${firebaseConfig.databaseURL}`, "info");
+
+          testResults.config = true;
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка инициализации: ${error.message}`, "error");
+          testResults.config = false;
+          updateStatus("Ошибка конфигурации Firebase", "error");
+          return false;
+        }
+      }
+
+      // Шаг 3: Тест аутентификации
+      async function step3_testAuth() {
+        log("🔍 Шаг 3: Тест анонимной аутентификации...", "info");
+
+        if (!testResults.config && !step2_testConfig()) {
+          return false;
+        }
+
+        try {
+          log("🔑 Попытка анонимного входа...", "info");
+          const userCredential = await auth.signInAnonymously();
+          currentUser = userCredential.user;
+
+          log(`✅ Аутентификация успешна!`, "success");
+          log(`👤 User ID: ${currentUser.uid}`, "info");
+          log(`🔐 Anonymous: ${currentUser.isAnonymous}`, "info");
+
+          testResults.auth = true;
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка аутентификации: ${error.message}`, "error");
+          log(`Error code: ${error.code}`, "error");
+
+          if (error.code === "auth/operation-not-allowed") {
+            log(
+              "🔧 РЕШЕНИЕ: Включите Anonymous Authentication в Firebase Console!",
+              "warning"
+            );
+          }
+
+          testResults.auth = false;
+          updateStatus("Аутентификация заблокирована", "error");
+          return false;
+        }
+      }
+
+      // Шаг 4: Тест подключения к базе данных
+      async function step4_testDatabase() {
+        log("🔍 Шаг 4: Тест подключения к Realtime Database...", "info");
+
+        if (!testResults.auth && !(await step3_testAuth())) {
+          return false;
+        }
+
+        try {
+          log("📡 Проверяем доступность базы данных...", "info");
+
+          // Попытка прочитать корень базы данных
+          const snapshot = await database.ref("/").once("value");
+          log("✅ Подключение к базе данных успешно!", "success");
+          log(
+            `📊 Данные в корне: ${snapshot.exists() ? "есть" : "пусто"}`,
+            "info"
+          );
+
+          testResults.database = true;
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка подключения к БД: ${error.message}`, "error");
+          log(`Error code: ${error.code}`, "error");
+
+          if (error.code === "PERMISSION_DENIED") {
+            log(
+              "🔧 РЕШЕНИЕ: Проверьте правила безопасности в Firebase!",
+              "warning"
+            );
+          }
+
+          testResults.database = false;
+          updateStatus("База данных недоступна", "error");
+          return false;
+        }
+      }
+
+      // Шаг 5: Тест записи данных
+      async function step5_testWrite() {
+        log("🔍 Шаг 5: Тест записи тестовых данных...", "info");
+
+        if (!testResults.database && !(await step4_testDatabase())) {
+          return false;
+        }
+
+        try {
+          const testData = {
+            data: {
+              test: true,
+              timestamp: new Date().toISOString(),
+              message: "Тестовая запись от диагностики",
+              balance: {
+                artur: 1000,
+                valeria: 500,
+                shared: 2000,
+              },
+            },
+            lastModified: firebase.database.ServerValue.TIMESTAMP,
+            version: "1.0.0",
+          };
+
+          log(
+            `💾 Записываем тестовые данные для пользователя: ${currentUser.uid}`,
+            "info"
+          );
+
+          await database.ref(`budgets/${currentUser.uid}`).set(testData);
+
+          log("✅ Тестовые данные успешно записаны!", "success");
+          log("🎉 СИНХРОНИЗАЦИЯ РАБОТАЕТ!", "success");
+
+          // Проверяем чтение
+          log("📥 Проверяем чтение записанных данных...", "info");
+          const snapshot = await database
+            .ref(`budgets/${currentUser.uid}`)
+            .once("value");
+
+          if (snapshot.exists()) {
+            const readData = snapshot.val();
+            log("✅ Данные успешно прочитаны обратно!", "success");
+            log(
+              `📊 Размер данных: ${JSON.stringify(readData).length} символов`,
+              "info"
+            );
+          } else {
+            log("⚠️ Данные записались, но не читаются", "warning");
+          }
+
+          testResults.write = true;
+          updateStatus("🎉 Синхронизация работает!", "success");
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка записи данных: ${error.message}`, "error");
+          log(`Error code: ${error.code}`, "error");
+
+          if (error.code === "PERMISSION_DENIED") {
+            log(
+              "🔧 РЕШЕНИЕ: Исправьте правила безопасности в Firebase!",
+              "warning"
+            );
+            log(
+              "Правила должны разрешать запись аутентифицированным пользователям",
+              "warning"
+            );
+          }
+
+          testResults.write = false;
+          updateStatus("Запись в БД заблокирована", "error");
+          return false;
+        }
+      }
+
+      // Полная диагностика
+      async function runFullTest() {
+        log("🚀 === ЗАПУСК ПОЛНОЙ ДИАГНОСТИКИ ===", "info");
+        testResults = {};
+
+        updateStatus("Выполняется полная диагностика...", "info");
+
+        const step1 = step1_testSDK();
+        if (!step1) return;
+
+        const step2 = step2_testConfig();
+        if (!step2) return;
+
+        const step3 = await step3_testAuth();
+        if (!step3) return;
+
+        const step4 = await step4_testDatabase();
+        if (!step4) return;
+
+        const step5 = await step5_testWrite();
+
+        log("=".repeat(50), "info");
+        log("📊 ИТОГИ ДИАГНОСТИКИ:", "info");
+        log(
+          `SDK: ${testResults.sdk ? "✅" : "❌"}`,
+          testResults.sdk ? "success" : "error"
+        );
+        log(
+          `Config: ${testResults.config ? "✅" : "❌"}`,
+          testResults.config ? "success" : "error"
+        );
+        log(
+          `Auth: ${testResults.auth ? "✅" : "❌"}`,
+          testResults.auth ? "success" : "error"
+        );
+        log(
+          `Database: ${testResults.database ? "✅" : "❌"}`,
+          testResults.database ? "success" : "error"
+        );
+        log(
+          `Write: ${testResults.write ? "✅" : "❌"}`,
+          testResults.write ? "success" : "error"
+        );
+
+        if (step5) {
+          log(
+            "🎉 ВСЕ ТЕСТЫ ПРОЙДЕНЫ! Синхронизация должна работать!",
+            "success"
+          );
+          updateStatus("Диагностика завершена успешно!", "success");
+        } else {
+          log("❌ Обнаружены проблемы. Следуйте инструкциям выше.", "error");
+        }
+      }
+
+      function clearLog() {
+        document.getElementById("logContainer").innerHTML = "";
+        updateStatus("Лог очищен", "info");
+      }
+
+      // Инициализация при загрузке
+      window.addEventListener("load", () => {
+        displayConfig();
+        log("🔧 Firebase Debug Console загружен", "info");
+        log(
+          '💡 Нажмите "Полная диагностика" для проверки синхронизации',
+          "info"
+        );
+      });
+    </script>
+  </body>
+</html>

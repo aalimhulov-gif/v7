@@ -12,14 +12,12 @@ const oldFirebaseConfig = {
 
 // НОВАЯ конфигурация Firebase (замените после создания нового проекта)
 const firebaseConfig = {
-  // Вставьте сюда конфигурацию из нового Firebase проекта
-  apiKey: "НОВЫЙ_API_KEY",
-  authDomain: "budget-artur-valeria.firebaseapp.com",
-  databaseURL: "https://budget-artur-valeria-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "budget-artur-valeria", 
-  storageBucket: "budget-artur-valeria.appspot.com",
-  messagingSenderId: "НОВЫЙ_SENDER_ID",
-  appId: "НОВЫЙ_APP_ID"
+  apiKey: "AIzaSyAiB6veVSOVDVz5Nx8xZ9Eb_6dEp7JUTBo",
+  authDomain: "budgetami.firebaseapp.com",
+  projectId: "budgetami",
+  storageBucket: "budgetami.firebasestorage.app",
+  messagingSenderId: "446736675165",
+  appId: "1:446736675165:web:00858e64e042e95bf1b8b4"
 };
 
 // Экспорт новой конфигурации
