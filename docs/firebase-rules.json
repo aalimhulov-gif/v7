@@ -2,6 +2,23 @@
   "rules": {
     ".read": "auth != null",
     ".write": false,
+    "users": {
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId",
+        "budgetData": {
+          ".validate": "newData.hasChildren(['metadata'])",
+          "metadata": {
+            ".validate": "newData.hasChildren(['lastModified', 'userId'])"
+          },
+          "operations": {
+            "$operationKey": {
+              ".validate": "newData.hasChildren(['id', 'type', 'amount'])"
+            }
+          }
+        }
+      }
+    },
     "budgets": {
       "$userId": {
         ".read": "auth != null && auth.uid == $userId",

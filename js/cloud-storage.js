@@ -89,29 +89,52 @@ const CloudStorage = {
 
     try {
       console.log(`📤 Сохраняем данные для пользователя: ${this.userId}`);
-      await database.ref(`budgets/${this.userId}`).set({
-        data: data,
-        lastModified: firebase.database.ServerValue.TIMESTAMP,
-        version: APP_CONFIG.version
-      });
+      
+      // Create readable structure for Firebase Console
+      const budgetData = {
+        metadata: {
+          lastModified: firebase.database.ServerValue.TIMESTAMP,
+          version: APP_CONFIG.version,
+          userId: this.userId,
+          totalOperations: data.operations ? data.operations.length : 0,
+          lastOperation: data.operations && data.operations.length > 0 ? data.operations[0] : null
+        },
+        operations: this.formatOperationsForFirebase(data.operations || []),
+        goals: data.goals || [],
+        limits: data.limits || {},
+        categories: data.categories || {},
+        settings: data.settings || {}
+      };
+      
+      await database.ref(`users/${this.userId}/budgetData`).set(budgetData);
       
       // Also save to localStorage as backup
       StorageUtils.set(APP_CONFIG.storageKey, data);
       console.log('✅ Data saved to Firebase Realtime Database');
       return true;
     } catch (error) {
-      console.error('❌ Cloud save error:', error);
-      console.error('Error code:', error.code);
-      
-      if (error.code === 'PERMISSION_DENIED') {
-        console.error('🔒 ПРОБЛЕМА: Нет прав для записи данных!');
-        console.error('Решение: Проверьте правила Firebase');
-      }
-      
+      console.error('❌ Cloud save failed:', error);
       // Fallback to localStorage
-      console.log('🔄 Fallback: сохраняем в localStorage');
       return StorageUtils.set(APP_CONFIG.storageKey, data);
     }
+  },
+
+  // Format operations for better Firebase Console readability
+  formatOperationsForFirebase(operations) {
+    const formatted = {};
+    operations.forEach((op, index) => {
+      const key = `${op.date}_${op.id}`;
+      formatted[key] = {
+        ...op,
+        index: index,
+        readableDate: new Date(op.date).toLocaleDateString('ru-RU'),
+        readableAmount: `${op.amount} zł`,
+        readableType: op.type === 'income' ? 'ДОХОД' : 'РАСХОД',
+        readablePerson: op.person === 'artur' ? 'АРТУР' : 'ВАЛЕРИЯ',
+        deviceInfo: op.device ? `${op.device.name} (${op.device.type})` : 'Unknown'
+      };
+    });
+    return formatted;
   },
 
   // Load data from cloud (Realtime Database)
@@ -125,15 +148,17 @@ const CloudStorage = {
 
     try {
       console.log(`📥 Загружаем данные для пользователя: ${this.userId}`);
-      const snapshot = await database.ref(`budgets/${this.userId}`).once('value');
+      const snapshot = await database.ref(`users/${this.userId}/budgetData`).once('value');
       
       if (snapshot.exists()) {
         const cloudData = snapshot.val();
-        const data = cloudData.data;
+        console.log('✅ Data loaded from Firebase Realtime Database');
+        
+        // Convert Firebase format back to app format
+        const data = this.convertFromFirebaseFormat(cloudData);
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
-        console.log('✅ Data loaded from Firebase Realtime Database');
         return data;
       } else {
         // No cloud data, try localStorage
@@ -153,6 +178,24 @@ const CloudStorage = {
       console.log('🔄 Fallback: загружаем из localStorage');
       return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
+  },
+
+  // Convert Firebase format back to app format
+  convertFromFirebaseFormat(firebaseData) {
+    const data = {
+      operations: [],
+      goals: firebaseData.goals || [],
+      limits: firebaseData.limits || {},
+      categories: firebaseData.categories || {},
+      settings: firebaseData.settings || {}
+    };
+
+    // Convert operations back from Firebase format
+    if (firebaseData.operations) {
+      data.operations = Object.values(firebaseData.operations).sort((a, b) => b.id - a.id);
+    }
+
+    return data;
   },
 
   // Check if cloud data is newer than local
@@ -220,23 +263,22 @@ const CloudStorage = {
 
     console.log('🔄 Настройка real-time слушателя для синхронизации...');
     
-    const dataRef = database.ref(`budgets/${this.userId}/data`);
+    const dataRef = database.ref(`users/${this.userId}/budgetData`);
     
     const listener = dataRef.on('value', (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.val();
-        console.log('🔄 Получены обновления из Firebase:', data);
+        const firebaseData = snapshot.val();
+        console.log('🔄 Получены обновления из Firebase:', firebaseData);
+        
+        // Convert Firebase format to app format
+        const data = this.convertFromFirebaseFormat(firebaseData);
         
         // Save to localStorage as backup
-        const fullData = {
-          ...data,
-          lastModified: Date.now()
-        };
-        StorageUtils.set(APP_CONFIG.storageKey, fullData);
+        StorageUtils.set(APP_CONFIG.storageKey, data);
         
         // Call the callback to update UI
         if (callback && typeof callback === 'function') {
-          callback(fullData);
+          callback(data);
         }
       }
     }, (error) => {
@@ -249,7 +291,7 @@ const CloudStorage = {
   // Remove real-time listener
   removeRealtimeListener(listener) {
     if (listener && this.isAvailable && this.userId && database) {
-      database.ref(`budgets/${this.userId}/data`).off('value', listener);
+      database.ref(`users/${this.userId}/budgetData`).off('value', listener);
       console.log('🔄 Real-time слушатель отключен');
     }
   }

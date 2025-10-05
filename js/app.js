@@ -94,15 +94,17 @@ class BudgetApp {
 
   // ===== REAL-TIME SYNCHRONIZATION =====
   setupRealtimeSync() {
+    console.log('🔄 setupRealtimeSync() вызвана');
     this.updateSyncStatus('connecting', 'Подключение...');
     
     if (EnhancedStorage.isCloudAvailable()) {
-      console.log('🔄 Настройка real-time синхронизации...');
+      console.log('☁️ Cloud storage доступен, настраиваем real-time sync');
       const listener = EnhancedStorage.setupRealtimeSync((newData) => {
-        console.log('📡 Получены обновления данных:', newData);
+        console.log('📡 Получены обновления данных через real-time:', newData);
         this.updateSyncStatus('syncing', 'Синхронизация...');
         
         if (newData) {
+          console.log('📊 Обновляем данные приложения:', newData);
           this.data = { ...this.data, ...newData };
           this.updateUI();
           this.showSyncNotification('Данные обновлены с другого устройства');
@@ -115,8 +117,14 @@ class BudgetApp {
       
       // Store listener reference for cleanup
       this.realtimeListener = listener;
-      this.updateSyncStatus('connected', 'Подключено');
+      
+      // Set connected status after successful setup
+      setTimeout(() => {
+        console.log('✅ Real-time sync настроен успешно');
+        this.updateSyncStatus('connected', 'Подключено');
+      }, 2000);
     } else {
+      console.log('❌ Cloud storage недоступен');
       this.updateSyncStatus('error', 'Офлайн');
     }
   }
