@@ -28,12 +28,31 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
     />
 
+    <!-- Path Detection Script -->
+    <script>
+      // Global path detection for GitHub Pages
+      window.isGitHubPages =
+        window.location.hostname === "aalimhulov-gif.github.io";
+      window.basePath = window.isGitHubPages ? "/v7/" : "";
+    </script>
+
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/variables.css" />
-    <link rel="stylesheet" href="css/layout.css" />
-    <link rel="stylesheet" href="css/components.css" />
-    <link rel="stylesheet" href="css/operations.css" />
-    <link rel="stylesheet" href="css/modals.css" />
+    <script>
+      const cssFiles = [
+        "css/variables.css",
+        "css/layout.css",
+        "css/components.css",
+        "css/operations.css",
+        "css/modals.css",
+      ];
+
+      cssFiles.forEach((cssFile) => {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = window.basePath + cssFile;
+        document.head.appendChild(link);
+      });
+    </script>
   </head>
   <body>
     <!-- Header -->
@@ -643,16 +662,55 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="js/firebase-config.js"></script>
 
-    <!-- JavaScript Files -->
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/cloud-storage.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/rendering.js"></script>
-    <script src="js/data-management.js"></script>
-    <script src="js/analytics.js"></script>
-    <script src="js/main.js"></script>
+    <!-- Firebase Config Loading -->
+    <script>
+      // Function to load script with correct path
+      function loadScript(src) {
+        const script = document.createElement("script");
+        script.src = window.basePath + src;
+        document.head.appendChild(script);
+      }
+
+      // Load Firebase config first
+      loadScript("js/firebase-config.js");
+    </script>
+
+    <!-- JavaScript Files - loaded with correct paths -->
+    <script>
+      // Load all app scripts with correct paths
+      const scripts = [
+        "js/config.js",
+        "js/utils.js",
+        "js/cloud-storage.js",
+        "js/app.js",
+        "js/rendering.js",
+        "js/data-management.js",
+        "js/analytics.js",
+        "js/main.js",
+      ];
+
+      // Load scripts sequentially
+      let scriptIndex = 0;
+      function loadNextScript() {
+        if (scriptIndex < window.scripts.length) {
+          const script = document.createElement("script");
+          script.src = window.basePath + window.scripts[scriptIndex];
+          script.onload = () => {
+            scriptIndex++;
+            loadNextScript();
+          };
+          script.onerror = () => {
+            scriptIndex++;
+            loadNextScript();
+          };
+          document.head.appendChild(script);
+        }
+      }
+
+      window.scripts = scripts;
+      // Start loading after a short delay to ensure Firebase config loads first
+      setTimeout(loadNextScript, 100);
+    </script>
   </body>
 </html>
