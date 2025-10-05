@@ -32,10 +32,10 @@ function initializeFirebase() {
     database = firebase.database();
     auth = firebase.auth();
     
-    console.log('Firebase Realtime Database initialized successfully');
+    console.log('✅ Firebase Realtime Database initialized successfully');
     return true;
   } catch (error) {
-    console.error('Firebase initialization error:', error);
+    console.error('❌ Firebase initialization error:', error);
     return false;
   }
 }
@@ -47,6 +47,8 @@ const CloudStorage = {
 
   // Initialize cloud storage
   async init() {
+    console.log('🔥 CloudStorage.init() - Начинаем инициализацию...');
+    
     // Initialize Firebase first
     if (!initializeFirebase()) {
       console.info('Firebase not available, using localStorage only');
@@ -55,14 +57,23 @@ const CloudStorage = {
     }
 
     try {
+      console.log('🔑 Попытка анонимной аутентификации...');
       // Try to sign in anonymously for user identification
       const userCredential = await auth.signInAnonymously();
       this.userId = userCredential.user.uid;
       this.isAvailable = true;
-      console.log('Cloud storage initialized successfully with user:', this.userId);
+      console.log(`✅ Cloud storage initialized successfully with user: ${this.userId}`);
       return true;
     } catch (error) {
-      console.error('Cloud storage initialization failed:', error);
+      console.error('❌ Cloud storage initialization failed:', error);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      if (error.code === 'PERMISSION_DENIED') {
+        console.error('🔒 ПРОБЛЕМА: Правила Firebase блокируют доступ!');
+        console.error('Решение: Обновите правила в Firebase Console');
+      }
+      
       this.isAvailable = false;
       return false;
     }
@@ -70,11 +81,15 @@ const CloudStorage = {
 
   // Save data to cloud (Realtime Database)
   async save(data) {
+    console.log('💾 CloudStorage.save() - Попытка сохранения данных...');
+    
     if (!this.isAvailable || !this.userId || !database) {
+      console.log('⚠️ Cloud storage недоступен, используем localStorage');
       return StorageUtils.set(APP_CONFIG.storageKey, data);
     }
 
     try {
+      console.log(`📤 Сохраняем данные для пользователя: ${this.userId}`);
       await database.ref(`budgets/${this.userId}`).set({
         data: data,
         lastModified: firebase.database.ServerValue.TIMESTAMP,
@@ -83,22 +98,34 @@ const CloudStorage = {
       
       // Also save to localStorage as backup
       StorageUtils.set(APP_CONFIG.storageKey, data);
-      console.log('Data saved to Firebase Realtime Database');
+      console.log('✅ Data saved to Firebase Realtime Database');
       return true;
     } catch (error) {
-      console.error('Cloud save error:', error);
+      console.error('❌ Cloud save error:', error);
+      console.error('Error code:', error.code);
+      
+      if (error.code === 'PERMISSION_DENIED') {
+        console.error('🔒 ПРОБЛЕМА: Нет прав для записи данных!');
+        console.error('Решение: Проверьте правила Firebase');
+      }
+      
       // Fallback to localStorage
+      console.log('🔄 Fallback: сохраняем в localStorage');
       return StorageUtils.set(APP_CONFIG.storageKey, data);
     }
   },
 
   // Load data from cloud (Realtime Database)
   async load() {
+    console.log('📥 CloudStorage.load() - Попытка загрузки данных...');
+    
     if (!this.isAvailable || !this.userId || !database) {
+      console.log('⚠️ Cloud storage недоступен, используем localStorage');
       return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
 
     try {
+      console.log(`📥 Загружаем данные для пользователя: ${this.userId}`);
       const snapshot = await database.ref(`budgets/${this.userId}`).once('value');
       
       if (snapshot.exists()) {
@@ -107,16 +134,24 @@ const CloudStorage = {
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
-        console.log('Data loaded from Firebase Realtime Database');
+        console.log('✅ Data loaded from Firebase Realtime Database');
         return data;
       } else {
         // No cloud data, try localStorage
-        console.log('No cloud data found, using localStorage');
+        console.log('ℹ️ No cloud data found, using localStorage');
         return StorageUtils.get(APP_CONFIG.storageKey, null);
       }
     } catch (error) {
-      console.error('Cloud load error:', error);
+      console.error('❌ Cloud load error:', error);
+      console.error('Error code:', error.code);
+      
+      if (error.code === 'PERMISSION_DENIED') {
+        console.error('🔒 ПРОБЛЕМА: Нет прав для чтения данных!');
+        console.error('Решение: Проверьте правила Firebase');
+      }
+      
       // Fallback to localStorage
+      console.log('🔄 Fallback: загружаем из localStorage');
       return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
   },
@@ -131,17 +166,14 @@ const CloudStorage = {
       const snapshot = await database.ref(`budgets/${this.userId}/lastModified`).once('value');
       
       if (snapshot.exists()) {
-        const cloudData = doc.data();
+        const cloudTimestamp = snapshot.val();
         const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
         
-        if (!localData) return true;
-        
-        // Compare timestamps if available
-        if (cloudData.lastModified && localData.lastSaved) {
-          return cloudData.lastModified.toDate() > new Date(localData.lastSaved);
+        if (!localData || !localData.lastModified) {
+          return true; // Cloud has data, local doesn't
         }
         
-        return false;
+        return cloudTimestamp > localData.lastModified;
       }
       
       return false;
@@ -151,101 +183,91 @@ const CloudStorage = {
     }
   },
 
-  // Sync data between local and cloud
+  // Sync data between cloud and local
   async sync() {
     if (!this.isAvailable) {
-      return StorageUtils.get(APP_CONFIG.storageKey, null);
+      console.log('Cloud sync not available');
+      return false;
     }
 
     try {
       const hasUpdates = await this.checkForUpdates();
       
       if (hasUpdates) {
-        return await this.load();
+        console.log('Syncing from cloud...');
+        const cloudData = await this.load();
+        return cloudData;
       } else {
-        const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
-        if (localData) {
-          await this.save(localData);
-        }
-        return localData;
+        console.log('Local data is up to date');
+        return null;
       }
     } catch (error) {
       console.error('Sync error:', error);
-      return StorageUtils.get(APP_CONFIG.storageKey, null);
+      return null;
     }
   },
 
-  // Get connection status
+  // Check connection status
   isConnected() {
     return this.isAvailable && this.userId !== null;
   }
 };
 
-// Enhanced Storage Utilities with Cloud Integration
+// Enhanced Storage that combines localStorage and cloud storage
 const EnhancedStorage = {
-  // Initialize storage system
   async init() {
-    try {
-      await CloudStorage.init();
-    } catch (error) {
-      console.warn('Cloud storage initialization failed, using localStorage only:', error);
-    }
-  },
-
-  // Save data (tries cloud first, falls back to local)
-  async save(data) {
-    // Add timestamp
-    data.lastSaved = new Date().toISOString();
+    console.log('🚀 EnhancedStorage.init() - Инициализация хранилища...');
+    const cloudInitialized = await CloudStorage.init();
     
-    try {
-      if (CloudStorage.isConnected()) {
-        return await CloudStorage.save(data);
-      } else {
-        return StorageUtils.set(APP_CONFIG.storageKey, data);
-      }
-    } catch (error) {
-      console.warn('Save error, falling back to localStorage:', error);
-      return StorageUtils.set(APP_CONFIG.storageKey, data);
+    if (cloudInitialized) {
+      console.log('☁️ Cloud storage available');
+    } else {
+      console.log('💾 Using localStorage only');
     }
+    
+    return true;
   },
 
-  // Load data (tries cloud first, falls back to local)
+  async save(data) {
+    console.log('💾 EnhancedStorage.save() - Сохранение данных...');
+    
+    // Always save to localStorage first
+    const localSuccess = StorageUtils.set(APP_CONFIG.storageKey, data);
+    
+    // Try to save to cloud if available
+    if (CloudStorage.isAvailable) {
+      const cloudSuccess = await CloudStorage.save(data);
+      console.log(`Результат сохранения: localStorage=${localSuccess}, cloud=${cloudSuccess}`);
+      return cloudSuccess;
+    }
+    
+    console.log(`Результат сохранения: localStorage=${localSuccess}, cloud=unavailable`);
+    return localSuccess;
+  },
+
   async load() {
-    try {
-      if (CloudStorage.isConnected()) {
-        return await CloudStorage.load();
-      } else {
-        return StorageUtils.get(APP_CONFIG.storageKey, null);
+    console.log('📥 EnhancedStorage.load() - Загрузка данных...');
+    
+    // Try cloud first if available
+    if (CloudStorage.isAvailable) {
+      const cloudData = await CloudStorage.load();
+      if (cloudData) {
+        console.log('📊 Данные загружены из облака');
+        return cloudData;
       }
-    } catch (error) {
-      console.warn('Load error, falling back to localStorage:', error);
-      return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
+    
+    // Fallback to localStorage
+    const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
+    console.log('📊 Данные загружены из localStorage');
+    return localData;
   },
 
-  // Sync data
   async sync() {
-    try {
-      return await CloudStorage.sync();
-    } catch (error) {
-      console.warn('Sync error:', error);
-      return StorageUtils.get(APP_CONFIG.storageKey, null);
-    }
+    return await CloudStorage.sync();
   },
 
-  // Get storage status
-  getStatus() {
-    return {
-      cloudAvailable: CloudStorage.isAvailable,
-      cloudConnected: CloudStorage.isConnected(),
-      userId: CloudStorage.userId
-    };
+  isCloudAvailable() {
+    return CloudStorage.isConnected();
   }
 };
-
-// Export for use in other modules
-if (typeof window !== 'undefined') {
-  window.CloudStorage = CloudStorage;
-  window.EnhancedStorage = EnhancedStorage;
-  window.initializeFirebase = initializeFirebase;
-}

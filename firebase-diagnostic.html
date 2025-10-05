@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🔧 Firebase Диагностика</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 900px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .panel {
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .status {
+        padding: 12px;
+        border-radius: 6px;
+        margin: 10px 0;
+        font-weight: bold;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+        border-left: 4px solid #28a745;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+      }
+      .warning {
+        background: #fff3cd;
+        color: #856404;
+        border-left: 4px solid #ffc107;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border-left: 4px solid #17a2b8;
+      }
+
+      button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin: 8px;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+
+      .step {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 10px 0;
+      }
+      .step h4 {
+        margin-top: 0;
+        color: #495057;
+      }
+
+      .code-block {
+        background: #f1f3f4;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        padding: 12px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        overflow-x: auto;
+      }
+
+      #log {
+        background: #2d3748;
+        color: #e2e8f0;
+        border-radius: 6px;
+        padding: 15px;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 6px;
+        margin: 15px 0;
+      }
+      .alert-danger {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔧 Firebase Диагностика и Исправление</h1>
+
+    <div class="alert alert-danger">
+      <strong>⚠️ ПРОБЛЕМА НАЙДЕНА!</strong><br />
+      В Firebase установлены правила, которые
+      <strong>полностью блокируют доступ</strong>:<br />
+      <code>{ "rules": { ".read": false, ".write": false } }</code>
+    </div>
+
+    <div class="panel">
+      <h3>📋 Пошаговое исправление</h3>
+
+      <div class="step">
+        <h4>Шаг 1: Откройте Firebase Console</h4>
+        <p>
+          Перейдите на
+          <a href="https://console.firebase.google.com" target="_blank"
+            >https://console.firebase.google.com</a
+          >
+        </p>
+        <p>Выберите проект <strong>"my-budżet"</strong></p>
+      </div>
+
+      <div class="step">
+        <h4>Шаг 2: Перейдите в Realtime Database</h4>
+        <p>
+          В левом меню найдите <strong>"Realtime Database"</strong> и нажмите на
+          него
+        </p>
+      </div>
+
+      <div class="step">
+        <h4>Шаг 3: Откройте Rules (Правила)</h4>
+        <p>
+          В верхней части экрана нажмите на вкладку <strong>"Rules"</strong>
+        </p>
+      </div>
+
+      <div class="step">
+        <h4>Шаг 4: Замените правила</h4>
+        <p>Удалите ВСЕ существующие правила и вставьте эти:</p>
+        <div class="code-block">
+          { "rules": { "budgets": { "$userId": { ".read": "auth != null &&
+          auth.uid == $userId", ".write": "auth != null && auth.uid == $userId",
+          ".validate": "newData.hasChildren(['data', 'lastModified',
+          'version'])" } } } }
+        </div>
+      </div>
+
+      <div class="step">
+        <h4>Шаг 5: Опубликуйте правила</h4>
+        <p>Нажмите кнопку <strong>"Publish"</strong> (Опубликовать)</p>
+        <p>Дождитесь сообщения об успешном обновлении</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>🧪 Диагностические тесты</h3>
+      <div id="mainStatus" class="status info">Готов к тестированию...</div>
+
+      <button onclick="runFullDiagnostic()">🔍 Полная диагностика</button>
+      <button onclick="testCurrentRules()">📋 Проверить правила</button>
+      <button onclick="testWithNewRules()">✅ Тест с новыми правилами</button>
+      <button onclick="clearLog()">🧹 Очистить лог</button>
+
+      <h4>📝 Лог диагностики:</h4>
+      <div id="log"></div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+      // Firebase конфигурация
+      const firebaseConfig = {
+        apiKey: "ATZaEVeSSGtLRpQq7e_ZQKPjOZkRq-YRKOpSjE",
+        authDomain: "my-budżet.firebaseapp.com",
+        databaseURL:
+          "https://my-budżet-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "my-budżet",
+        storageBucket: "my-budżet.firebasestorage.app",
+        messagingSenderId: "38303046323",
+        appId: "1:38303046323:web:e60dbad863a6db92c6",
+        measurementId: "G-3SWHMH2ZF8",
+      };
+
+      let app, auth, database;
+      let currentUser = null;
+
+      function log(message, type = "info") {
+        const logElement = document.getElementById("log");
+        const timestamp = new Date().toLocaleTimeString();
+        const colors = {
+          error: "#ff6b6b",
+          success: "#51cf66",
+          warning: "#ffd43b",
+          info: "#74c0fc",
+        };
+
+        const logEntry = `<div style="color: ${
+          colors[type] || colors.info
+        }; margin-bottom: 5px;">
+                [${timestamp}] ${message}
+            </div>`;
+
+        logElement.innerHTML += logEntry;
+        logElement.scrollTop = logElement.scrollHeight;
+        console.log(`[${timestamp}] ${message}`);
+      }
+
+      function updateMainStatus(message, type) {
+        const statusElement = document.getElementById("mainStatus");
+        statusElement.textContent = message;
+        statusElement.className = `status ${type}`;
+      }
+
+      async function initializeFirebase() {
+        try {
+          if (!firebase.apps.length) {
+            app = firebase.initializeApp(firebaseConfig);
+          }
+          auth = firebase.auth();
+          database = firebase.database();
+          return true;
+        } catch (error) {
+          log(`❌ Ошибка инициализации Firebase: ${error.message}`, "error");
+          return false;
+        }
+      }
+
+      async function testCurrentRules() {
+        log("🔍 Проверяем текущие правила Firebase...", "info");
+
+        if (!(await initializeFirebase())) {
+          updateMainStatus("Ошибка инициализации Firebase", "error");
+          return;
+        }
+
+        try {
+          // Попытка чтения без аутентификации
+          log("📖 Тест чтения без аутентификации...", "info");
+          const testRef = database.ref("test-connection");
+          await testRef.once("value");
+          log("✅ Чтение без аутентификации разрешено", "success");
+        } catch (error) {
+          log(
+            `❌ Чтение без аутентификации заблокировано: ${error.message}`,
+            "error"
+          );
+
+          if (error.code === "PERMISSION_DENIED") {
+            log("🔒 Это означает, что правила блокируют доступ", "warning");
+            updateMainStatus(
+              "Правила блокируют доступ - нужно их обновить!",
+              "error"
+            );
+          }
+        }
+
+        try {
+          // Попытка записи без аутентификации
+          log("✏️ Тест записи без аутентификации...", "info");
+          const testRef = database.ref("test-write");
+          await testRef.set({ test: true });
+          log("✅ Запись без аутентификации разрешена", "success");
+        } catch (error) {
+          log(
+            `❌ Запись без аутентификации заблокирована: ${error.message}`,
+            "error"
+          );
+        }
+      }
+
+      async function testWithNewRules() {
+        log(
+          "🧪 Тестируем с аутентификацией (как будет работать с новыми правилами)...",
+          "info"
+        );
+
+        if (!(await initializeFirebase())) {
+          updateMainStatus("Ошибка инициализации Firebase", "error");
+          return;
+        }
+
+        try {
+          // Аутентификация
+          log("🔑 Выполняем анонимную аутентификацию...", "info");
+          const userCredential = await auth.signInAnonymously();
+          currentUser = userCredential.user;
+          log(
+            `✅ Аутентификация успешна. User ID: ${currentUser.uid}`,
+            "success"
+          );
+
+          // Тест записи с аутентификацией
+          log("✏️ Тест записи с аутентификацией...", "info");
+          const userData = {
+            data: { test: true, timestamp: new Date().toISOString() },
+            lastModified: firebase.database.ServerValue.TIMESTAMP,
+            version: "1.0.0",
+          };
+
+          await database.ref(`budgets/${currentUser.uid}`).set(userData);
+          log("✅ Запись с аутентификацией успешна!", "success");
+
+          // Тест чтения с аутентификацией
+          log("📖 Тест чтения с аутентификацией...", "info");
+          const snapshot = await database
+            .ref(`budgets/${currentUser.uid}`)
+            .once("value");
+
+          if (snapshot.exists()) {
+            log("✅ Чтение с аутентификацией успешно!", "success");
+            log(
+              `📊 Данные: ${JSON.stringify(snapshot.val(), null, 2)}`,
+              "info"
+            );
+            updateMainStatus(
+              "Firebase работает правильно с аутентификацией!",
+              "success"
+            );
+          } else {
+            log("⚠️ Данные не найдены", "warning");
+          }
+        } catch (error) {
+          log(
+            `❌ Ошибка тестирования с аутентификацией: ${error.message}`,
+            "error"
+          );
+
+          if (error.code === "PERMISSION_DENIED") {
+            log("🔒 Доступ запрещен - проверьте правила Firebase!", "error");
+            updateMainStatus("Доступ запрещен - обновите правила!", "error");
+          }
+        }
+      }
+
+      async function runFullDiagnostic() {
+        log("🚀 Запуск полной диагностики Firebase...", "info");
+        log("=".repeat(50), "info");
+
+        updateMainStatus("Выполняется диагностика...", "info");
+
+        await testCurrentRules();
+        log("-".repeat(30), "info");
+        await testWithNewRules();
+
+        log("=".repeat(50), "info");
+        log("✅ Диагностика завершена!", "success");
+      }
+
+      function clearLog() {
+        document.getElementById("log").innerHTML = "";
+        updateMainStatus("Лог очищен", "info");
+      }
+
+      // Автозапуск диагностики
+      window.addEventListener("load", () => {
+        log("🔧 Страница диагностики загружена", "info");
+        log('💡 Нажмите "Полная диагностика" для проверки Firebase', "info");
+      });
+    </script>
+  </body>
+</html>
