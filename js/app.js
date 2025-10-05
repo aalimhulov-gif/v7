@@ -30,34 +30,101 @@ class BudgetApp {
 
   // Get device information
   getDeviceInfo() {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isTablet = /iPad/i.test(navigator.userAgent) || (isMobile && window.innerWidth > 600);
+    const userAgent = navigator.userAgent;
     
-    let deviceType = 'desktop';
-    let deviceIcon = 'fas fa-desktop';
+    // Detect device type
+    let deviceType = 'Desktop';
+    let deviceModel = 'Unknown';
+    let deviceOS = 'Unknown';
     
-    if (isTablet) {
-      deviceType = 'tablet';
-      deviceIcon = 'fas fa-tablet-alt';
-    } else if (isMobile) {
-      deviceType = 'mobile';
-      deviceIcon = 'fas fa-mobile-alt';
+    // iOS devices
+    if (/iPhone/.test(userAgent)) {
+      deviceType = 'iPhone';
+      deviceModel = this.getIPhoneModel(userAgent);
+      deviceOS = 'iOS';
+    } else if (/iPad/.test(userAgent)) {
+      deviceType = 'iPad';
+      deviceModel = 'iPad';
+      deviceOS = 'iOS';
     }
+    // Android devices
+    else if (/Android/.test(userAgent)) {
+      deviceType = 'Android';
+      deviceModel = this.getAndroidModel(userAgent);
+      deviceOS = 'Android';
+    }
+    // Desktop
+    else {
+      deviceOS = this.getDesktopOS(userAgent);
+      deviceModel = this.getBrowser(userAgent);
+    }
+    
+    const timestamp = new Date();
+    const sessionId = Date.now().toString(36);
     
     return {
       type: deviceType,
-      icon: deviceIcon,
-      name: `${deviceType.charAt(0).toUpperCase() + deviceType.slice(1)}`,
-      timestamp: Date.now(),
-      userAgent: navigator.userAgent.substring(0, 50) + '...'
+      model: deviceModel,
+      os: deviceOS,
+      name: `${deviceType}`,
+      displayName: `${deviceType} (${deviceModel})`,
+      timestamp: timestamp.getTime(),
+      lastSeen: timestamp.toLocaleString('ru-RU'),
+      sessionId: sessionId,
+      userAgent: userAgent.substring(0, 100) + '...'
     };
+  }
+
+  getIPhoneModel(userAgent) {
+    if (userAgent.includes('iPhone15')) return 'iPhone 15';
+    if (userAgent.includes('iPhone14')) return 'iPhone 14';
+    if (userAgent.includes('iPhone13')) return 'iPhone 13';
+    if (userAgent.includes('iPhone12')) return 'iPhone 12';
+    if (userAgent.includes('iPhone11')) return 'iPhone 11';
+    return 'iPhone';
+  }
+
+  getAndroidModel(userAgent) {
+    const samsungMatch = userAgent.match(/SM-([A-Z0-9]+)/);
+    if (samsungMatch) return `Samsung ${samsungMatch[1]}`;
+    
+    if (userAgent.includes('Pixel')) return 'Google Pixel';
+    if (userAgent.includes('Huawei')) return 'Huawei';
+    if (userAgent.includes('Xiaomi')) return 'Xiaomi';
+    
+    return 'Android Device';
+  }
+
+  getDesktopOS(userAgent) {
+    if (userAgent.includes('Windows')) return 'Windows';
+    if (userAgent.includes('Mac')) return 'macOS';
+    if (userAgent.includes('Linux')) return 'Linux';
+    return 'Desktop';
+  }
+
+  getBrowser(userAgent) {
+    if (userAgent.includes('Chrome')) return 'Chrome';
+    if (userAgent.includes('Firefox')) return 'Firefox';
+    if (userAgent.includes('Safari')) return 'Safari';
+    if (userAgent.includes('Edge')) return 'Edge';
+    return 'Browser';
   }
 
   // ===== INITIALIZATION =====
   async init() {
     try {
       // Initialize cloud storage
-      await EnhancedStorage.init();
+      const cloudInitialized = await EnhancedStorage.init();
+      
+      if (cloudInitialized) {
+        console.log('✅ Облачное хранилище инициализировано');
+        
+        // Register this device
+        await EnhancedStorage.registerDevice(this.deviceInfo);
+        console.log(`✅ Устройство зарегистрировано: ${this.deviceInfo.displayName}`);
+      } else {
+        console.log('⚠️ Работаем в офлайн режиме');
+      }
       
       // Load data from cloud or local storage
       await this.loadData();
@@ -120,6 +187,9 @@ class BudgetApp {
       // Store listener reference for cleanup
       this.realtimeListener = listener;
       
+      // Set up periodic device status updates
+      this.setupDeviceStatusUpdates();
+      
       // Set connected status after successful setup
       setTimeout(() => {
         this.updateSyncStatus('connected', 'Подключено');
@@ -127,6 +197,20 @@ class BudgetApp {
     } else {
       this.updateSyncStatus('error', 'Офлайн');
     }
+  }
+
+  // Setup periodic device status updates
+  setupDeviceStatusUpdates() {
+    if (this.deviceStatusInterval) {
+      clearInterval(this.deviceStatusInterval);
+    }
+    
+    // Update device status every 30 seconds
+    this.deviceStatusInterval = setInterval(async () => {
+      if (EnhancedStorage.isCloudAvailable()) {
+        await EnhancedStorage.updateDeviceStatus(this.deviceInfo.sessionId, 'online');
+      }
+    }, 30000);
   }
 
   updateSyncStatus(status, text) {

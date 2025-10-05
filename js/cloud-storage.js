@@ -7,12 +7,14 @@ let auth = null;
 // Initialize Firebase when config is available
 function initializeFirebase() {
   if (typeof firebase === 'undefined') {
+    console.error('❌ Firebase SDK не загружен');
     return false;
   }
   
   try {
     // Firebase should already be initialized by firebase-config.js
     if (!firebase.apps.length) {
+      console.error('❌ Firebase не инициализирован');
       return false;
     }
     
@@ -20,8 +22,10 @@ function initializeFirebase() {
     database = firebase.database();
     auth = firebase.auth();
     
+    console.log('✅ Firebase успешно подключен к Realtime Database');
     return true;
   } catch (error) {
+    console.error('❌ Ошибка инициализации Firebase:', error);
     return false;
   }
 }
@@ -54,14 +58,62 @@ const CloudStorage = {
         });
         // Remove test data
         await database.ref(`families/${this.familyId}/test`).remove();
+        console.log('✅ Тест записи в Firebase успешен');
       } catch (testError) {
-        // Silent test error
+        console.error('❌ Тест записи в Firebase провален:', testError);
       }
       
       return true;
     } catch (error) {
+      console.error('❌ Ошибка инициализации CloudStorage:', error);
       this.isAvailable = false;
       return false;
+    }
+  },
+
+  // Register device in Firebase for tracking
+  async registerDevice(deviceInfo) {
+    if (!this.isAvailable || !database) {
+      return;
+    }
+
+    try {
+      const deviceData = {
+        ...deviceInfo,
+        userId: this.userId,
+        lastActive: new Date().toISOString(),
+        status: 'online'
+      };
+
+      // Save to active devices
+      await database.ref(`families/${this.familyId}/activeDevices/${deviceInfo.sessionId}`).set(deviceData);
+      
+      // Also save to device history
+      await database.ref(`families/${this.familyId}/deviceHistory/${deviceInfo.sessionId}`).set(deviceData);
+      
+      console.log(`✅ Устройство зарегистрировано: ${deviceInfo.displayName}`);
+      
+      // Set up automatic device cleanup on disconnect
+      database.ref(`families/${this.familyId}/activeDevices/${deviceInfo.sessionId}`).onDisconnect().remove();
+      
+    } catch (error) {
+      console.error('❌ Ошибка регистрации устройства:', error);
+    }
+  },
+
+  // Update device status
+  async updateDeviceStatus(sessionId, status = 'online') {
+    if (!this.isAvailable || !database) {
+      return;
+    }
+
+    try {
+      await database.ref(`families/${this.familyId}/activeDevices/${sessionId}`).update({
+        lastActive: new Date().toISOString(),
+        status: status
+      });
+    } catch (error) {
+      console.error('❌ Ошибка обновления статуса устройства:', error);
     }
   },
 
@@ -192,16 +244,19 @@ const EnhancedStorage = {
       try {
         const result = await CloudStorage.save(data);
         if (result) {
+          console.log('✅ Данные сохранены в облако');
           return true;
         }
       } catch (error) {
+        console.error('❌ Ошибка сохранения в облако:', error);
         // Continue to localStorage fallback
       }
     }
     
     // Fallback to localStorage
-    const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
-    return localData;
+    const localResult = StorageUtils.set(APP_CONFIG.storageKey, data);
+    console.log('💾 Данные сохранены локально');
+    return localResult;
   },
 
   async load() {
@@ -239,6 +294,16 @@ const EnhancedStorage = {
   // Remove real-time synchronization
   removeRealtimeSync(listener) {
     CloudStorage.removeRealtimeListener(listener);
+  },
+
+  // Register device
+  async registerDevice(deviceInfo) {
+    return CloudStorage.registerDevice(deviceInfo);
+  },
+
+  // Update device status
+  async updateDeviceStatus(sessionId, status) {
+    return CloudStorage.updateDeviceStatus(sessionId, status);
   },
 
   // Get current status
