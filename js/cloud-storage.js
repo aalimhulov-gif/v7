@@ -1,27 +1,38 @@
 // Firebase Storage Integration for Budget App
 
-// Firebase Configuration (will be set from environment)
-let firebaseConfig = null;
-let db = null;
+// Firebase Configuration
+const firebaseConfig = {
+  apiKey: "ATZaEVeSSGtLRpQq7e_ZQKPjOZkRq-YRKOpSjE",
+  authDomain: "my-budżet.firebaseapp.com", 
+  databaseURL: "https://my-budżet-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "my-budżet",
+  storageBucket: "my-budżet.firebasestorage.app",
+  messagingSenderId: "38303046323",
+  appId: "1:38303046323:web:e60dbad863a6db92c6",
+  measurementId: "G-3SWHMH2ZF8"
+};
+
+// Firebase Database References
+let database = null;
 let auth = null;
 
 // Initialize Firebase when config is available
-function initializeFirebase(config) {
+function initializeFirebase() {
   if (typeof firebase === 'undefined') {
     console.warn('Firebase SDK not loaded. Falling back to localStorage');
     return false;
   }
   
   try {
-    firebaseConfig = config;
-    firebase.initializeApp(config);
-    db = firebase.firestore();
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    
+    // Use Realtime Database instead of Firestore
+    database = firebase.database();
     auth = firebase.auth();
     
-    // Enable offline persistence
-    db.enablePersistence({ synchronizeTabs: true })
-      .catch(err => console.warn('Persistence error:', err));
-    
+    console.log('Firebase Realtime Database initialized successfully');
     return true;
   } catch (error) {
     console.error('Firebase initialization error:', error);
@@ -36,19 +47,19 @@ const CloudStorage = {
 
   // Initialize cloud storage
   async init() {
-    // Check if Firebase is available
-    if (typeof firebase === 'undefined' || !db || !auth) {
+    // Initialize Firebase first
+    if (!initializeFirebase()) {
       console.info('Firebase not available, using localStorage only');
       this.isAvailable = false;
       return false;
     }
 
     try {
-      // Try to sign in anonymously
+      // Try to sign in anonymously for user identification
       const userCredential = await auth.signInAnonymously();
       this.userId = userCredential.user.uid;
       this.isAvailable = true;
-      console.log('Cloud storage initialized successfully');
+      console.log('Cloud storage initialized successfully with user:', this.userId);
       return true;
     } catch (error) {
       console.error('Cloud storage initialization failed:', error);
@@ -57,21 +68,22 @@ const CloudStorage = {
     }
   },
 
-  // Save data to cloud
+  // Save data to cloud (Realtime Database)
   async save(data) {
-    if (!this.isAvailable || !this.userId) {
+    if (!this.isAvailable || !this.userId || !database) {
       return StorageUtils.set(APP_CONFIG.storageKey, data);
     }
 
     try {
-      await db.collection('budgets').doc(this.userId).set({
+      await database.ref(`budgets/${this.userId}`).set({
         data: data,
-        lastModified: firebase.firestore.FieldValue.serverTimestamp(),
+        lastModified: firebase.database.ServerValue.TIMESTAMP,
         version: APP_CONFIG.version
       });
       
       // Also save to localStorage as backup
       StorageUtils.set(APP_CONFIG.storageKey, data);
+      console.log('Data saved to Firebase Realtime Database');
       return true;
     } catch (error) {
       console.error('Cloud save error:', error);
@@ -80,24 +92,26 @@ const CloudStorage = {
     }
   },
 
-  // Load data from cloud
+  // Load data from cloud (Realtime Database)
   async load() {
-    if (!this.isAvailable || !this.userId) {
+    if (!this.isAvailable || !this.userId || !database) {
       return StorageUtils.get(APP_CONFIG.storageKey, null);
     }
 
     try {
-      const doc = await db.collection('budgets').doc(this.userId).get();
+      const snapshot = await database.ref(`budgets/${this.userId}`).once('value');
       
-      if (doc.exists) {
-        const cloudData = doc.data();
+      if (snapshot.exists()) {
+        const cloudData = snapshot.val();
         const data = cloudData.data;
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
+        console.log('Data loaded from Firebase Realtime Database');
         return data;
       } else {
         // No cloud data, try localStorage
+        console.log('No cloud data found, using localStorage');
         return StorageUtils.get(APP_CONFIG.storageKey, null);
       }
     } catch (error) {
@@ -109,14 +123,14 @@ const CloudStorage = {
 
   // Check if cloud data is newer than local
   async checkForUpdates() {
-    if (!this.isAvailable || !this.userId) {
+    if (!this.isAvailable || !this.userId || !database) {
       return false;
     }
 
     try {
-      const doc = await db.collection('budgets').doc(this.userId).get();
+      const snapshot = await database.ref(`budgets/${this.userId}/lastModified`).once('value');
       
-      if (doc.exists) {
+      if (snapshot.exists()) {
         const cloudData = doc.data();
         const localData = StorageUtils.get(APP_CONFIG.storageKey, null);
         
