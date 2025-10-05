@@ -262,3 +262,23 @@ const EnhancedStorage = {
     };
   }
 };
+
+// Initialize cloud storage
+async function initializeCloudStorage() {
+  if (window.app) {
+    await CloudStorage.init();
+    
+    if (CloudStorage.isAvailable) {
+      // Load data from cloud
+      await window.app.loadDataFromCloud();
+      
+      // Set up real-time sync
+      CloudStorage.setupRealtimeSync(window.app);
+      
+      // Register device
+      if (window.app.deviceInfo) {
+        await CloudStorage.registerDevice(window.app.deviceInfo);
+      }
+    }
+  }
+}

@@ -676,41 +676,27 @@
       loadScript("js/firebase-config.js");
     </script>
 
-    <!-- JavaScript Files - loaded with correct paths -->
+    <!-- Load main application scripts -->
     <script>
-      // Load all app scripts with correct paths
-      const scripts = [
-        "js/config.js",
-        "js/utils.js",
-        "js/cloud-storage.js",
-        "js/app.js",
-        "js/rendering.js",
-        "js/data-management.js",
-        "js/analytics.js",
-        "js/main.js",
-      ];
-
-      // Load scripts sequentially
-      let scriptIndex = 0;
-      function loadNextScript() {
-        if (scriptIndex < window.scripts.length) {
-          const script = document.createElement("script");
-          script.src = window.basePath + window.scripts[scriptIndex];
-          script.onload = () => {
-            scriptIndex++;
-            loadNextScript();
+      // Wait for Firebase to be ready, then load app scripts
+      function waitForFirebaseAndLoad() {
+        if (typeof firebase !== 'undefined') {
+          // Load main app scripts
+          const script1 = document.createElement('script');
+          script1.src = window.basePath + 'js/app.js';
+          script1.onload = () => {
+            const script2 = document.createElement('script');
+            script2.src = window.basePath + 'js/cloud-storage.js';
+            document.head.appendChild(script2);
           };
-          script.onerror = () => {
-            scriptIndex++;
-            loadNextScript();
-          };
-          document.head.appendChild(script);
+          document.head.appendChild(script1);
+        } else {
+          setTimeout(waitForFirebaseAndLoad, 100);
         }
       }
-
-      window.scripts = scripts;
-      // Start loading after a short delay to ensure Firebase config loads first
-      setTimeout(loadNextScript, 100);
+      
+      // Start loading after Firebase config
+      setTimeout(waitForFirebaseAndLoad, 200);
     </script>
   </body>
 </html>

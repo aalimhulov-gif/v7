@@ -320,6 +320,21 @@ class BudgetApp {
     this.renderGoals();
   }
 
+  async loadDataFromCloud() {
+    try {
+      const loadedData = await EnhancedStorage.load();
+      if (loadedData) {
+        this.data = { ...this.data, ...loadedData };
+        this.updateBalances();
+        this.renderOperations();
+        this.renderLimits();
+        this.renderGoals();
+      }
+    } catch (error) {
+      // Silent error handling
+    }
+  }
+
   showStorageStatus() {
     const status = EnhancedStorage.getStatus();
     const statusText = status.cloudConnected ? 
@@ -549,3 +564,13 @@ class BudgetApp {
     input.click();
   }
 }
+
+// Initialize app when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  window.app = new BudgetApp();
+  
+  // Wait for cloud storage to be ready
+  if (typeof initializeCloudStorage === 'function') {
+    initializeCloudStorage();
+  }
+});
