@@ -1,18 +1,18 @@
 {
   "rules": {
     ".read": "auth != null",
-    ".write": false,
+    ".write": "auth != null",
     "families": {
-      ".read": "auth != null",
+      ".read": "auth != null", 
       ".write": "auth != null",
       "artur-valeria-budget": {
         ".read": "auth != null",
         ".write": "auth != null"
-      },
-      "Device": {
-        ".read": "auth != null",
-        ".write": "auth != null"
       }
+    },
+    "diagnostic": {
+      ".read": "auth != null",
+      ".write": "auth != null"
     }
   }
 }

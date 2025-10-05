@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Финальная диагностика бюджет-приложения</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        background: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      .log {
+        background: #f8f9fa;
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        border-left: 4px solid #6c757d;
+        font-family: monospace;
+      }
+      .success {
+        background: #d4edda;
+        border-left-color: #28a745;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        border-left-color: #dc3545;
+        color: #721c24;
+      }
+      .warning {
+        background: #fff3cd;
+        border-left-color: #ffc107;
+        color: #856404;
+      }
+      .info {
+        background: #d1ecf1;
+        border-left-color: #17a2b8;
+        color: #0c5460;
+      }
+      button {
+        padding: 12px 20px;
+        margin: 10px 5px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      button:disabled {
+        background: #6c757d;
+        cursor: not-allowed;
+      }
+      .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 8px;
+      }
+      .status-connected {
+        background: #28a745;
+      }
+      .status-disconnected {
+        background: #dc3545;
+      }
+      .status-syncing {
+        background: #ffc107;
+        animation: pulse 1s infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+      h1 {
+        color: #333;
+        text-align: center;
+      }
+      h2 {
+        color: #495057;
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔧 Финальная диагностика бюджет-приложения</h1>
+
+      <div class="test-section">
+        <h2>🚀 Быстрые действия</h2>
+        <button onclick="runFullDiagnostic()">Полная диагностика</button>
+        <button onclick="testOperationFlow()">Тест добавления операции</button>
+        <button onclick="testSyncBetweenDevices()">Тест синхронизации</button>
+        <button onclick="clearAllData()">Очистить все данные</button>
+      </div>
+
+      <div class="test-section">
+        <h2>📊 Статус системы</h2>
+        <div id="systemStatus">
+          <div>
+            🔥 Firebase:
+            <span class="status-indicator status-disconnected"></span
+            ><span id="firebaseStatus">Проверка...</span>
+          </div>
+          <div>
+            🔐 Аутентификация:
+            <span class="status-indicator status-disconnected"></span
+            ><span id="authStatus">Проверка...</span>
+          </div>
+          <div>
+            💾 База данных:
+            <span class="status-indicator status-disconnected"></span
+            ><span id="dbStatus">Проверка...</span>
+          </div>
+          <div>
+            👨‍👩‍👧‍👦 Семейные данные:
+            <span class="status-indicator status-disconnected"></span
+            ><span id="familyStatus">Проверка...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>📝 Журнал диагностики</h2>
+        <div id="results"></div>
+      </div>
+    </div>
+
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <!-- App scripts -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/cloud-storage.js"></script>
+    <script src="js/app.js"></script>
+
+    <script>
+      function log(message, type = "info") {
+        const results = document.getElementById("results");
+        const div = document.createElement("div");
+        div.className = `log ${type}`;
+        div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+        results.appendChild(div);
+        results.scrollTop = results.scrollHeight;
+        console.log(`[${type.toUpperCase()}] ${message}`);
+      }
+
+      function updateStatus(elementId, connected, text) {
+        const element = document.getElementById(elementId);
+        const indicator = element.previousElementSibling;
+
+        indicator.className = `status-indicator ${
+          connected ? "status-connected" : "status-disconnected"
+        }`;
+        element.textContent = text;
+      }
+
+      async function runFullDiagnostic() {
+        log("🔍 === НАЧИНАЕМ ПОЛНУЮ ДИАГНОСТИКУ ===", "info");
+
+        // Reset all statuses
+        updateStatus("firebaseStatus", false, "Проверка...");
+        updateStatus("authStatus", false, "Проверка...");
+        updateStatus("dbStatus", false, "Проверка...");
+        updateStatus("familyStatus", false, "Проверка...");
+
+        // 1. Check Firebase loading
+        log("1️⃣ Проверяем загрузку Firebase SDK...", "info");
+        if (typeof firebase === "undefined") {
+          log("❌ Firebase SDK не загружен!", "error");
+          updateStatus("firebaseStatus", false, "SDK не загружен");
+          return;
+        }
+        log("✅ Firebase SDK загружен", "success");
+
+        // 2. Check Firebase initialization
+        log("2️⃣ Проверяем инициализацию Firebase...", "info");
+        try {
+          const app = firebase.app();
+          log(`✅ Firebase инициализирован: ${app.name}`, "success");
+          updateStatus("firebaseStatus", true, "Инициализирован");
+        } catch (error) {
+          log(`❌ Firebase не инициализирован: ${error.message}`, "error");
+          updateStatus("firebaseStatus", false, "Не инициализирован");
+          return;
+        }
+
+        // 3. Test authentication
+        log("3️⃣ Тестируем аутентификацию...", "info");
+        try {
+          const auth = firebase.auth();
+
+          // Check if already signed in
+          if (auth.currentUser) {
+            log(`✅ Уже авторизован: ${auth.currentUser.uid}`, "success");
+            updateStatus("authStatus", true, "Авторизован");
+          } else {
+            log("🔐 Выполняем анонимную авторизацию...", "info");
+            await auth.signInAnonymously();
+            log(
+              `✅ Анонимная авторизация успешна: ${auth.currentUser.uid}`,
+              "success"
+            );
+            updateStatus("authStatus", true, "Авторизован");
+          }
+        } catch (error) {
+          log(`❌ Ошибка авторизации: ${error.message}`, "error");
+          updateStatus("authStatus", false, "Ошибка авторизации");
+          return;
+        }
+
+        // 4. Test database connection
+        log("4️⃣ Тестируем подключение к базе данных...", "info");
+        try {
+          const database = firebase.database();
+          const testRef = database.ref("diagnostic/connection-test");
+
+          const testData = {
+            timestamp: Date.now(),
+            message: "Connection test",
+            userAgent: navigator.userAgent,
+          };
+
+          await testRef.set(testData);
+          log("✅ Запись в базу данных успешна", "success");
+
+          const snapshot = await testRef.once("value");
+          const data = snapshot.val();
+
+          if (data && data.timestamp === testData.timestamp) {
+            log("✅ Чтение из базы данных успешно", "success");
+            updateStatus("dbStatus", true, "Подключена");
+          } else {
+            log("❌ Данные не совпадают при чтении", "error");
+            updateStatus("dbStatus", false, "Ошибка чтения");
+          }
+
+          // Clean up
+          await testRef.remove();
+          log("🧹 Тестовые данные удалены", "info");
+        } catch (error) {
+          log(`❌ Ошибка работы с базой данных: ${error.message}`, "error");
+          updateStatus("dbStatus", false, "Ошибка подключения");
+          return;
+        }
+
+        // 5. Test family data path
+        log("5️⃣ Тестируем семейный путь данных...", "info");
+        try {
+          const database = firebase.database();
+          const familyRef = database.ref(
+            "families/artur-valeria-budget/diagnostic"
+          );
+
+          const familyTestData = {
+            timestamp: Date.now(),
+            message: "Family path test",
+            device: navigator.platform,
+          };
+
+          await familyRef.set(familyTestData);
+          log("✅ Запись по семейному пути успешна", "success");
+
+          const snapshot = await familyRef.once("value");
+          const data = snapshot.val();
+
+          if (data && data.timestamp === familyTestData.timestamp) {
+            log("✅ Чтение семейных данных успешно", "success");
+            updateStatus("familyStatus", true, "Доступны");
+          } else {
+            log("❌ Семейные данные не читаются корректно", "error");
+            updateStatus("familyStatus", false, "Ошибка чтения");
+          }
+
+          // Clean up
+          await familyRef.remove();
+          log("🧹 Семейные тестовые данные удалены", "info");
+        } catch (error) {
+          log(`❌ Ошибка семейного пути: ${error.message}`, "error");
+          updateStatus("familyStatus", false, "Ошибка пути");
+          return;
+        }
+
+        // 6. Test EnhancedStorage
+        log("6️⃣ Тестируем EnhancedStorage...", "info");
+        if (typeof EnhancedStorage !== "undefined") {
+          try {
+            const status = EnhancedStorage.getStatus();
+            log(
+              `📊 EnhancedStorage статус: подключено=${status.cloudConnected}`,
+              "info"
+            );
+
+            if (status.cloudConnected) {
+              log("✅ EnhancedStorage подключен к облаку", "success");
+            } else {
+              log("⚠️ EnhancedStorage работает локально", "warning");
+            }
+          } catch (error) {
+            log(`❌ Ошибка EnhancedStorage: ${error.message}`, "error");
+          }
+        } else {
+          log("❌ EnhancedStorage не найден", "error");
+        }
+
+        log("🎉 === ДИАГНОСТИКА ЗАВЕРШЕНА ===", "success");
+      }
+
+      async function testOperationFlow() {
+        log("💰 === ТЕСТ ДОБАВЛЕНИЯ ОПЕРАЦИИ ===", "info");
+
+        try {
+          // Check if app is available
+          if (typeof BudgetApp === "undefined") {
+            log("❌ BudgetApp не найден", "error");
+            return;
+          }
+
+          log("📱 Создаем экземпляр приложения...", "info");
+          const app = new BudgetApp();
+          await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for initialization
+
+          log("💸 Создаем тестовую операцию...", "info");
+          const testOperation = {
+            amount: "100.50",
+            person: "artur",
+            category: "зарплата",
+            description: "Тестовая операция диагностики",
+            date: new Date().toISOString().split("T")[0],
+          };
+
+          log(
+            `📋 Данные операции: ${JSON.stringify(testOperation, null, 2)}`,
+            "info"
+          );
+
+          await app.addOperation("income", testOperation);
+          log("✅ Операция добавлена успешно!", "success");
+
+          log(
+            `📊 Количество операций в приложении: ${app.data.operations.length}`,
+            "info"
+          );
+
+          // Check if it appears in Firebase
+          log("🔍 Проверяем появление в Firebase...", "info");
+          await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait for sync
+
+          const database = firebase.database();
+          const operationsRef = database.ref(
+            "families/artur-valeria-budget/budgetData/operations"
+          );
+          const snapshot = await operationsRef.once("value");
+          const firebaseOperations = snapshot.val();
+
+          if (
+            firebaseOperations &&
+            Object.keys(firebaseOperations).length > 0
+          ) {
+            log(
+              `✅ Операции найдены в Firebase: ${
+                Object.keys(firebaseOperations).length
+              }`,
+              "success"
+            );
+          } else {
+            log("⚠️ Операции не найдены в Firebase", "warning");
+          }
+        } catch (error) {
+          log(`❌ Ошибка теста операции: ${error.message}`, "error");
+          console.error("Детали ошибки:", error);
+        }
+      }
+
+      async function testSyncBetweenDevices() {
+        log("🔄 === ТЕСТ СИНХРОНИЗАЦИИ МЕЖДУ УСТРОЙСТВАМИ ===", "info");
+
+        try {
+          const database = firebase.database();
+
+          // Simulate device 1 writing data
+          log("📱 Устройство 1: Записываем данные...", "info");
+          const device1Data = {
+            timestamp: Date.now(),
+            device: "Desktop-Chrome",
+            operation: {
+              id: Date.now(),
+              type: "income",
+              amount: 500,
+              person: "artur",
+              description: "Sync test from device 1",
+            },
+          };
+
+          await database
+            .ref("families/artur-valeria-budget/sync-test/device1")
+            .set(device1Data);
+          log("✅ Device 1 записал данные", "success");
+
+          // Wait a moment
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          // Simulate device 2 reading data
+          log("📱 Устройство 2: Читаем данные...", "info");
+          const snapshot = await database
+            .ref("families/artur-valeria-budget/sync-test/device1")
+            .once("value");
+          const readData = snapshot.val();
+
+          if (readData && readData.timestamp === device1Data.timestamp) {
+            log("✅ Device 2 успешно прочитал данные от Device 1", "success");
+            log("🔄 Синхронизация работает!", "success");
+          } else {
+            log("❌ Device 2 не смог прочитать данные от Device 1", "error");
+          }
+
+          // Clean up
+          await database
+            .ref("families/artur-valeria-budget/sync-test")
+            .remove();
+          log("🧹 Тестовые данные синхронизации удалены", "info");
+        } catch (error) {
+          log(`❌ Ошибка теста синхронизации: ${error.message}`, "error");
+        }
+      }
+
+      async function clearAllData() {
+        if (
+          !confirm(
+            "Вы уверены, что хотите удалить ВСЕ данные? Это действие необратимо!"
+          )
+        ) {
+          return;
+        }
+
+        log("🗑️ === ОЧИСТКА ВСЕХ ДАННЫХ ===", "warning");
+
+        try {
+          // Clear Firebase
+          log("☁️ Очищаем Firebase...", "info");
+          const database = firebase.database();
+          await database.ref("families/artur-valeria-budget").remove();
+          log("✅ Firebase очищен", "success");
+
+          // Clear localStorage
+          log("💾 Очищаем localStorage...", "info");
+          localStorage.removeItem("budgetAppData");
+          log("✅ localStorage очищен", "success");
+
+          log("🎉 Все данные удалены!", "success");
+        } catch (error) {
+          log(`❌ Ошибка очистки: ${error.message}`, "error");
+        }
+      }
+
+      // Auto-run basic status check on load
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          log("🔄 Автоматическая проверка статуса...", "info");
+          runFullDiagnostic();
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

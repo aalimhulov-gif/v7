@@ -1,16 +1,5 @@
 // Firebase Storage Integration for Budget App
 
-// Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyAiB6veVSOVDVz5Nx8xZ9Eb_6dEp7JUTBo",
-  authDomain: "budgetami.firebaseapp.com",
-  databaseURL: "https://budgetami-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "budgetami",
-  storageBucket: "budgetami.firebasestorage.app",
-  messagingSenderId: "211374589260",
-  appId: "1:211374589260:web:1570eb8b1ddd56a8f64eca"
-};
-
 // Firebase Database References
 let database = null;
 let auth = null;
@@ -23,8 +12,10 @@ function initializeFirebase() {
   }
   
   try {
+    // Firebase should already be initialized by firebase-config.js
     if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+      console.error('❌ Firebase not initialized! Check firebase-config.js');
+      return false;
     }
     
     // Use Realtime Database instead of Firestore

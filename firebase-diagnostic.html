@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Firebase Diagnostic</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .log {
+        background: #f5f5f5;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 5px;
+      }
+      .success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .info {
+        background: #d1ecf1;
+        color: #0c5460;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 10px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Firebase Диагностика</h1>
+    <button onclick="runFullDiagnostic()">Запустить полную диагностику</button>
+    <button onclick="testOperationSave()">Тест сохранения операции</button>
+    <button onclick="checkFirebaseConfig()">
+      Проверить Firebase конфигурацию
+    </button>
+    <div id="results"></div>
+
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <!-- App scripts -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/cloud-storage.js"></script>
+
+    <script>
+      function log(message, type = "info") {
+        const results = document.getElementById("results");
+        const div = document.createElement("div");
+        div.className = `log ${type}`;
+        div.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+        results.appendChild(div);
+        console.log(message);
+      }
+
+      async function checkFirebaseConfig() {
+        log("🔍 Проверяем Firebase конфигурацию...", "info");
+
+        // Check if Firebase is loaded
+        if (typeof firebase === "undefined") {
+          log("❌ Firebase не загружен!", "error");
+          return false;
+        }
+        log("✅ Firebase загружен", "success");
+
+        // Check if config exists
+        if (typeof firebaseConfig === "undefined") {
+          log("❌ firebaseConfig не найден!", "error");
+          return false;
+        }
+        log("✅ firebaseConfig найден", "success");
+        log(`📋 Config: ${JSON.stringify(firebaseConfig, null, 2)}`, "info");
+
+        // Check if Firebase is initialized
+        try {
+          const app = firebase.app();
+          log("✅ Firebase приложение инициализировано", "success");
+          log(`📱 App name: ${app.name}`, "info");
+        } catch (error) {
+          log(`❌ Firebase не инициализировано: ${error.message}`, "error");
+
+          // Try to initialize
+          try {
+            firebase.initializeApp(firebaseConfig);
+            log("✅ Firebase инициализирован вручную", "success");
+          } catch (initError) {
+            log(`❌ Ошибка инициализации: ${initError.message}`, "error");
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      async function runFullDiagnostic() {
+        log("🚀 Начинаем полную диагностику...", "info");
+
+        // 1. Check Firebase config
+        const configOk = await checkFirebaseConfig();
+        if (!configOk) return;
+
+        // 2. Test authentication
+        log("🔐 Тестируем анонимную аутентификацию...", "info");
+        try {
+          const auth = firebase.auth();
+          await auth.signInAnonymously();
+          log("✅ Анонимная аутентификация успешна", "success");
+          log(`👤 User ID: ${auth.currentUser.uid}`, "info");
+        } catch (error) {
+          log(`❌ Ошибка аутентификации: ${error.message}`, "error");
+          return;
+        }
+
+        // 3. Test database connection
+        log("🗄️ Тестируем подключение к базе данных...", "info");
+        try {
+          const database = firebase.database();
+          const testRef = database.ref("diagnostic-test");
+          await testRef.set({
+            timestamp: Date.now(),
+            message: "Test connection",
+          });
+          log("✅ Запись в базу данных успешна", "success");
+
+          const snapshot = await testRef.once("value");
+          const data = snapshot.val();
+          log(
+            `✅ Чтение из базы данных успешно: ${JSON.stringify(data)}`,
+            "success"
+          );
+
+          // Clean up
+          await testRef.remove();
+          log("🧹 Тестовые данные удалены", "info");
+        } catch (error) {
+          log(`❌ Ошибка работы с базой данных: ${error.message}`, "error");
+          return;
+        }
+
+        // 4. Test family path
+        log("👨‍👩‍👧‍👦 Тестируем путь семьи...", "info");
+        try {
+          const database = firebase.database();
+          const familyRef = database.ref("families/artur-valeria-budget/test");
+          await familyRef.set({
+            timestamp: Date.now(),
+            message: "Family path test",
+          });
+          log("✅ Запись по пути семьи успешна", "success");
+
+          const snapshot = await familyRef.once("value");
+          const data = snapshot.val();
+          log(
+            `✅ Чтение по пути семьи успешно: ${JSON.stringify(data)}`,
+            "success"
+          );
+
+          // Clean up
+          await familyRef.remove();
+          log("🧹 Тестовые данные семьи удалены", "info");
+        } catch (error) {
+          log(`❌ Ошибка работы с путем семьи: ${error.message}`, "error");
+          return;
+        }
+
+        log("🎉 Полная диагностика завершена успешно!", "success");
+      }
+
+      async function testOperationSave() {
+        log("💰 Тестируем сохранение операции...", "info");
+
+        const configOk = await checkFirebaseConfig();
+        if (!configOk) return;
+
+        // Create test operation
+        const testOperation = {
+          id: Date.now(),
+          type: "income",
+          amount: 100,
+          person: "artur",
+          category: "test",
+          description: "Тестовая операция",
+          date: new Date().toISOString().split("T")[0],
+          timestamp: new Date().toISOString(),
+          device: { type: "Desktop", browser: "Test" },
+        };
+
+        log(
+          `📋 Тестовая операция: ${JSON.stringify(testOperation, null, 2)}`,
+          "info"
+        );
+
+        try {
+          // Test EnhancedStorage if available
+          if (typeof EnhancedStorage !== "undefined") {
+            log("🔍 Используем EnhancedStorage...", "info");
+
+            // Test family data save
+            const testData = {
+              operations: [testOperation],
+              categories: { income: ["test"], expense: ["test"] },
+              limits: [],
+              goals: [],
+            };
+
+            await EnhancedStorage.save(testData);
+            log("✅ Сохранение через EnhancedStorage успешно", "success");
+
+            // Test operation by device save
+            await EnhancedStorage.saveOperationByDevice(
+              testOperation,
+              testOperation.device
+            );
+            log("✅ Сохранение операции по устройству успешно", "success");
+          } else {
+            log("❌ EnhancedStorage не найден", "error");
+
+            // Direct Firebase test
+            log("🔄 Прямое тестирование Firebase...", "info");
+            const database = firebase.database();
+            const operationRef = database.ref(
+              `families/artur-valeria-budget/budgetData/operations/${testOperation.id}`
+            );
+            await operationRef.set(testOperation);
+            log("✅ Прямое сохранение в Firebase успешно", "success");
+          }
+        } catch (error) {
+          log(`❌ Ошибка сохранения операции: ${error.message}`, "error");
+          console.error("Детали ошибки:", error);
+        }
+      }
+
+      // Auto-run basic check on load
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          log("🔄 Автоматическая проверка при загрузке...", "info");
+          checkFirebaseConfig();
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>
