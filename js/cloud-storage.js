@@ -83,6 +83,9 @@ const CloudStorage = {
   // Save data to cloud (Realtime Database)
   async save(data) {
     console.log('💾 CloudStorage.save() - Попытка сохранения данных...');
+    console.log(`🏠 Family ID: ${this.familyId}`);
+    console.log(`🔑 User ID: ${this.userId}`);
+    console.log(`☁️ Available: ${this.isAvailable}`);
     
     if (!this.isAvailable || !database) {
       console.log('⚠️ Cloud storage недоступен, используем localStorage');
@@ -90,17 +93,21 @@ const CloudStorage = {
     }
 
     try {
-      console.log(`📤 Сохраняем данные для семьи: ${this.familyId}`);
+      const savePath = `families/${this.familyId}/budgetData`;
+      console.log(`📤 Сохраняем данные по пути: ${savePath}`);
+      console.log(`📊 Данные для сохранения:`, data);
       
       // Save full data structure for app to work
-      await database.ref(`families/${this.familyId}/budgetData`).set(data);
+      await database.ref(savePath).set(data);
       
       // Also save to localStorage as backup
       StorageUtils.set(APP_CONFIG.storageKey, data);
       console.log('✅ Data saved to Firebase Realtime Database');
+      console.log(`✅ Путь сохранения: ${savePath}`);
       return true;
     } catch (error) {
       console.error('❌ Cloud save failed:', error);
+      console.error('❌ Error details:', error.message);
       // Fallback to localStorage
       return StorageUtils.set(APP_CONFIG.storageKey, data);
     }
@@ -201,33 +208,9 @@ const CloudStorage = {
     }
   },
 
-  // Sync data between cloud and local
-  async sync() {
-    if (!this.isAvailable) {
-      console.log('Cloud sync not available');
-      return false;
-    }
-
-    try {
-      const hasUpdates = await this.checkForUpdates();
-      
-      if (hasUpdates) {
-        console.log('Syncing from cloud...');
-        const cloudData = await this.load();
-        return cloudData;
-      } else {
-        console.log('Local data is up to date');
-        return null;
-      }
-    } catch (error) {
-      console.error('Sync error:', error);
-      return null;
-    }
-  },
-
   // Check connection status
   isConnected() {
-    return this.isAvailable && this.userId !== null;
+    return this.isAvailable;
   },
 
   // Setup real-time listener for data changes
@@ -239,25 +222,33 @@ const CloudStorage = {
 
     console.log('🔄 Настройка real-time слушателя для синхронизации...');
     
-    const dataRef = database.ref(`families/${this.familyId}/budgetData`);
+    const listenPath = `families/${this.familyId}/budgetData`;
+    console.log(`👂 Слушаем изменения по пути: ${listenPath}`);
+    const dataRef = database.ref(listenPath);
     
     const listener = dataRef.on('value', (snapshot) => {
+      console.log('👂 Real-time listener triggered');
       if (snapshot.exists()) {
         const data = snapshot.val();
-        console.log('🔄 Получены обновления из Firebase:', data);
+        console.log('� Получены обновления из Firebase:', data);
+        console.log(`📊 Операций в данных: ${data.operations ? data.operations.length : 0}`);
         
         // Save to localStorage as backup
         StorageUtils.set(APP_CONFIG.storageKey, data);
         
         // Call the callback to update UI
         if (callback && typeof callback === 'function') {
+          console.log('🔄 Вызываем callback для обновления UI');
           callback(data);
         }
+      } else {
+        console.log('📭 No data in snapshot');
       }
     }, (error) => {
       console.error('❌ Real-time listener error:', error);
     });
 
+    console.log(`✅ Real-time listener установлен для: ${listenPath}`);
     return listener;
   },
 

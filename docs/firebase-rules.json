@@ -3,37 +3,15 @@
     ".read": "auth != null",
     ".write": false,
     "families": {
+      ".read": "auth != null",
+      ".write": "auth != null",
       "artur-valeria-budget": {
         ".read": "auth != null",
-        ".write": "auth != null",
-        "budgetData": {
-          ".validate": "true"
-        }
+        ".write": "auth != null"
       },
       "Device": {
         ".read": "auth != null",
-        ".write": "auth != null",
-        "Desktop": {
-          "Operations": {
-            "$operationId": {
-              ".validate": "newData.hasChildren(['type', 'amount', 'person'])"
-            }
-          }
-        },
-        "Mobile": {
-          "Operations": {
-            "$operationId": {
-              ".validate": "newData.hasChildren(['type', 'amount', 'person'])"
-            }
-          }
-        },
-        "Tablet": {
-          "Operations": {
-            "$operationId": {
-              ".validate": "newData.hasChildren(['type', 'amount', 'person'])"
-            }
-          }
-        }
+        ".write": "auth != null"
       }
     }
   }

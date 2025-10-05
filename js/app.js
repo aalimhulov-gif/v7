@@ -203,6 +203,7 @@ class BudgetApp {
   async saveData() {
     console.log(`%c[BUDGET-APP] 💾 saveData() начат...`, 'color: #ff9800; font-weight: bold;');
     console.log(`%c[BUDGET-APP] 📊 Текущие данные:`, 'color: #ff9800;', this.data);
+    console.log(`%c[BUDGET-APP] 🔍 Family ID: artur-valeria-budget`, 'color: #2196F3; font-weight: bold;');
     
     try {
       console.log(`%c[BUDGET-APP] ☁️ Попытка сохранения через EnhancedStorage...`, 'color: #2196F3;');
