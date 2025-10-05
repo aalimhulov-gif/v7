@@ -26,9 +26,6 @@ class BudgetApp {
     
     // Device info for real-time tracking
     this.deviceInfo = this.getDeviceInfo();
-    console.log('🔧 Device Info:', this.deviceInfo);
-    
-    // Don't call init() here - it will be called manually as async
   }
 
   // Get device information
@@ -94,18 +91,23 @@ class BudgetApp {
 
   // ===== REAL-TIME SYNCHRONIZATION =====
   setupRealtimeSync() {
-    console.log('🔄 setupRealtimeSync() вызвана');
     this.updateSyncStatus('connecting', 'Подключение...');
     
     if (EnhancedStorage.isCloudAvailable()) {
-      console.log('☁️ Cloud storage доступен, настраиваем real-time sync');
       const listener = EnhancedStorage.setupRealtimeSync((newData) => {
-        console.log('📡 Получены обновления данных через real-time:', newData);
         this.updateSyncStatus('syncing', 'Синхронизация...');
         
         if (newData) {
-          console.log('📊 Обновляем данные приложения:', newData);
           this.data = { ...this.data, ...newData };
+          
+          // Normalize operations to always be an array
+          if (this.data.operations && !Array.isArray(this.data.operations)) {
+            this.data.operations = Object.values(this.data.operations);
+          }
+          if (!this.data.operations) {
+            this.data.operations = [];
+          }
+          
           this.updateUI();
           this.showSyncNotification('Данные обновлены с другого устройства');
         }
@@ -120,11 +122,9 @@ class BudgetApp {
       
       // Set connected status after successful setup
       setTimeout(() => {
-        console.log('✅ Real-time sync настроен успешно');
         this.updateSyncStatus('connected', 'Подключено');
       }, 2000);
     } else {
-      console.log('❌ Cloud storage недоступен');
       this.updateSyncStatus('error', 'Офлайн');
     }
   }
@@ -186,9 +186,16 @@ class BudgetApp {
       const savedData = await EnhancedStorage.load();
       if (savedData) {
         this.data = { ...this.data, ...savedData };
+        
+        // Normalize operations to always be an array
+        if (this.data.operations && !Array.isArray(this.data.operations)) {
+          this.data.operations = Object.values(this.data.operations);
+        }
+        if (!this.data.operations) {
+          this.data.operations = [];
+        }
       }
     } catch (error) {
-      console.error('Load data error:', error);
       this.loadDataLocal();
     }
   }
@@ -197,53 +204,41 @@ class BudgetApp {
     const saved = localStorage.getItem("budgetAppData");
     if (saved) {
       this.data = { ...this.data, ...JSON.parse(saved) };
+      
+      // Normalize operations to always be an array
+      if (this.data.operations && !Array.isArray(this.data.operations)) {
+        this.data.operations = Object.values(this.data.operations);
+      }
+      if (!this.data.operations) {
+        this.data.operations = [];
+      }
     }
   }
 
   async saveData() {
-    console.log(`%c[BUDGET-APP] 💾 saveData() начат...`, 'color: #ff9800; font-weight: bold;');
-    console.log(`%c[BUDGET-APP] 📊 Текущие данные:`, 'color: #ff9800;', this.data);
-    console.log(`%c[BUDGET-APP] 🔍 Family ID: artur-valeria-budget`, 'color: #2196F3; font-weight: bold;');
-    console.log(`%c[BUDGET-APP] 📈 Количество операций: ${this.data.operations.length}`, 'color: #2196F3; font-weight: bold;');
-    
     try {
-      console.log(`%c[BUDGET-APP] ☁️ Попытка сохранения через EnhancedStorage...`, 'color: #2196F3;');
-      console.log(`%c[BUDGET-APP] 🎯 Данные для сохранения:`, 'color: #2196F3;', JSON.stringify(this.data, null, 2));
-      
       const saveResult = await EnhancedStorage.save(this.data);
       
       if (saveResult) {
-        console.log(`%c[BUDGET-APP] ✅ Данные сохранены через EnhancedStorage!`, 'color: #4CAF50; font-weight: bold;');
-        
         // Verify save by trying to load back
         setTimeout(async () => {
           try {
             const loadedData = await EnhancedStorage.load();
-            if (loadedData && loadedData.operations) {
-              console.log(`%c[BUDGET-APP] ✅ Проверка: загружено операций: ${loadedData.operations.length}`, 'color: #4CAF50;');
-            } else {
-              console.log(`%c[BUDGET-APP] ⚠️ Проверка: данные не загрузились!`, 'color: #ff9800;');
-            }
+            // Silent verification
           } catch (verifyError) {
-            console.error(`%c[BUDGET-APP] ❌ Ошибка проверки сохранения:`, 'color: #f44336;', verifyError);
+            // Silent error handling
           }
         }, 1000);
-      } else {
-        console.log(`%c[BUDGET-APP] ⚠️ EnhancedStorage.save() вернул false`, 'color: #ff9800;');
       }
     } catch (error) {
-      console.error('%c[BUDGET-APP] ❌ Ошибка сохранения через EnhancedStorage:', 'color: #f44336; font-weight: bold;', error);
       // Fallback to localStorage
-      console.log(`%c[BUDGET-APP] 🔄 Fallback: сохраняем в localStorage...`, 'color: #ff9800;');
       localStorage.setItem("budgetAppData", JSON.stringify(this.data));
     }
     
-    console.log(`%c[BUDGET-APP] 🔄 Обновляем UI...`, 'color: #9c27b0;');
     this.updateBalances();
     this.renderOperations();
     this.renderLimits();
     this.renderGoals();
-    console.log(`%c[BUDGET-APP] ✅ saveData() завершен!`, 'color: #4CAF50; font-weight: bold;');
   }
 
   showStorageStatus() {
@@ -261,9 +256,6 @@ class BudgetApp {
 
   // ===== OPERATIONS =====
   async addOperation(type, formData) {
-    console.log(`%c[BUDGET-APP] 📝 addOperation вызван с типом: ${type}`, 'color: #2196F3; font-weight: bold;');
-    console.log('%c[BUDGET-APP] 📋 Данные формы:', 'color: #2196F3;', formData);
-    
     this.updateSyncStatus('syncing', 'Сохранение...');
     
     const operation = {
@@ -275,13 +267,15 @@ class BudgetApp {
       description: formData.description || "",
       date: formData.date,
       timestamp: new Date().toISOString(),
-      device: this.deviceInfo, // Add device info
+      device: this.deviceInfo,
     };
-
-    console.log(`%c[BUDGET-APP] ✏️ Создана операция:`, 'color: #4CAF50; font-weight: bold;', operation);
+    
+    // Ensure operations is an array
+    if (!Array.isArray(this.data.operations)) {
+      this.data.operations = [];
+    }
     
     this.data.operations.unshift(operation);
-    console.log(`%c[BUDGET-APP] 💾 Вызываем saveData()...`, 'color: #ff9800; font-weight: bold;');
     
     // Save main data
     this.saveData();
@@ -309,7 +303,12 @@ class BudgetApp {
     let arturBalance = 0;
     let valeriaBalance = 0;
 
-    this.data.operations.forEach((op) => {
+    // Ensure operations is an array
+    const operations = Array.isArray(this.data.operations) 
+      ? this.data.operations 
+      : Object.values(this.data.operations || {});
+
+    operations.forEach((op) => {
       const opDate = new Date(op.date);
       if (
         opDate.getMonth() === currentMonth &&

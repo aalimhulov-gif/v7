@@ -71,10 +71,8 @@ function closeModal(modalId) {
 // ===== FORM HANDLERS =====
 function addIncome(event) {
   event.preventDefault();
-  debugLog("💰 Добавляем доход...", 'info');
   const formData = new FormData(event.target);
   const data = Object.fromEntries(formData.entries());
-  debugLog(`💰 Данные дохода: ${JSON.stringify(data)}`, 'info');
 
   app.addOperation("income", data);
   event.target.reset();
@@ -84,10 +82,8 @@ function addIncome(event) {
 
 function addExpense(event) {
   event.preventDefault();
-  debugLog("💸 Добавляем расход...", 'info');
   const formData = new FormData(event.target);
   const data = Object.fromEntries(formData.entries());
-  debugLog(`💸 Данные расхода: ${JSON.stringify(data)}`, 'info');
 
   app.addOperation("expense", data);
   event.target.reset();
@@ -184,20 +180,14 @@ function clearAllData() {
 
 // ===== APP INITIALIZATION =====
 document.addEventListener("DOMContentLoaded", async () => {
-  debugLog("🚀 DOM загружен, начинаем инициализацию приложения...", 'info');
-  
   // Initialize the main app
-  debugLog("📱 Создаем экземпляр BudgetApp...", 'info');
   app = new BudgetApp();
   
   // Wait for async initialization to complete
   try {
-    debugLog("⚙️ Запускаем app.init()...", 'info');
     await app.init();
-    debugLog("✅ Приложение успешно инициализировано!", 'success');
   } catch (error) {
-    debugLog(`❌ Ошибка инициализации приложения: ${error.message}`, 'error');
-    console.error('App initialization failed:', error);
+    // Silent error handling
   }
 
   // Setup modal event listeners
